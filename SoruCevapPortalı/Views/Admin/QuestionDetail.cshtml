@@ -1,0 +1,146 @@
+﻿@model SoruCevapPortalı.Models.Question
+
+@{
+    ViewData["Title"] = Model.Title;
+
+    // SORU OY HESABI
+    var upVotes = Model.Votes?.Count(v => v.IsUpVote) ?? 0;
+    var downVotes = Model.Votes?.Count(v => !v.IsUpVote) ?? 0;
+    var questionScore = upVotes - downVotes;
+}
+
+<div class="container mt-4">
+
+    <!-- SORU KARTI -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex">
+
+                <!-- SORU OYLAMA -->
+                <div class="text-center me-3">
+                    <button class="btn btn-light" onclick="voteQuestion(@Model.Id, true)">▲</button>
+
+                    <div id="question-vote-@Model.Id" class="fw-bold fs-5">
+                        @questionScore
+                    </div>
+
+                    <button class="btn btn-light" onclick="voteQuestion(@Model.Id, false)">▼</button>
+                </div>
+
+                <!-- SORU BİLGİLERİ -->
+                <div>
+                    <h3>@Model.Title</h3>
+                    <p>@Model.Content</p>
+                    <p class="text-muted">
+                        <strong>Kategori:</strong> @Model.Category?.Name
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- CEVAPLAR -->
+    <h4 class="mb-3">Cevaplar (@Model.Answers.Count)</h4>
+
+    @foreach (var answer in Model.Answers
+        .OrderByDescending(a => a.IsBestAnswer)
+        .ThenByDescending(a => a.VoteCount))
+    {
+        <div class="card mb-3">
+            <div class="card-body d-flex">
+
+                <!-- CEVAP OYLAMA -->
+                <div class="text-center me-3">
+                    <button class="btn btn-light" onclick="voteAnswer(@answer.Id, true)">▲</button>
+
+                    <div id="answer-vote-@answer.Id" class="fw-bold fs-5">
+                        @answer.VoteCount
+                    </div>
+
+                    <button class="btn btn-light" onclick="voteAnswer(@answer.Id, false)">▼</button>
+                </div>
+
+                <!-- CEVAP METNİ -->
+                <div class="flex-grow-1">
+                    <p>@answer.Content</p>
+                    <p class="text-muted">@answer.CreatedDate.ToString("dd.MM.yyyy HH:mm")</p>
+                </div>
+
+                <!-- EN İYİ CEVAP -->
+                <div class="ms-3">
+                    @if (answer.IsBestAnswer)
+                    {
+                        <span class="badge bg-success">En İyi Cevap ✔</span>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-success btn-sm"
+                                onclick="markAsBest(@answer.Id)">
+                            En İyi Yap
+                        </button>
+                    }
+                </div>
+
+            </div>
+        </div>
+    }
+
+    <!-- CEVAP EKLEME FORMU -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5>Cevap Yaz</h5>
+            <form asp-action="Create" asp-controller="Answer" method="post">
+                <input type="hidden" name="QuestionId" value="@Model.Id" />
+                <textarea name="Content" class="form-control" rows="4" required></textarea>
+                <button type="submit" class="btn btn-primary mt-2">Gönder</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+
+<!-- AJAX SCRIPTS -->
+@section Scripts {
+    <script>
+
+        // ----------- SORU OY -----------
+        function voteQuestion(questionId, isUpvote) {
+
+            fetch('/Question/Vote?questionId=' + questionId + '&isUpvote=' + isUpvote, {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('question-vote-' + questionId).innerText = data.score;
+                }
+            });
+        }
+
+        // ----------- CEVAP OY -----------
+        function voteAnswer(answerId, isUpvote) {
+
+            fetch('/Answer/Vote?answerId=' + answerId + '&isUpvote=' + isUpvote, {
+                method: 'POST'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('answer-vote-' + answerId).innerText = data.score;
+                }
+            });
+        }
+
+        // ----------- EN İYİ CEVAP -----------
+        function markAsBest(answerId) {
+
+            fetch('/Answer/MarkAsBest?id=' + answerId, {
+                method: 'POST'
+            })
+            .then(() => location.reload());
+        }
+
+    </script>
+}

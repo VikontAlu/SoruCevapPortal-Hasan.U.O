@@ -1,0 +1,132 @@
+﻿@model SoruCevapPortalı.Models.Question
+
+@{
+    ViewData["Title"] = "Yeni Soru Sor";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Sol tarafta küçük bir nav / info panel -->
+        <div class="col-md-3 mb-4">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-compass"></i> Navigasyon
+                </div>
+                <div class="list-group list-group-flush">
+                    <a href="~/Question" class="list-group-item list-group-item-action">
+                        <i class="fas fa-list"></i> Tüm Sorular
+                    </a>
+                    <a href="~/Question/Ask" class="list-group-item list-group-item-action active">
+                        <i class="fas fa-plus-circle"></i> Yeni Soru Sor
+                    </a>
+                    <a href="~/" class="list-group-item list-group-item-action">
+                        <i class="fas fa-home"></i> Ana Sayfa
+                    </a>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-lightbulb"></i> İpucu
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">İyi bir soru:</p>
+                    <ul class="small ps-3">
+                        <li>Net bir başlığa sahiptir.</li>
+                        <li>Problemi adım adım anlatır.</li>
+                        <li>Gerekirse kod veya ekran görüntüsü içerir.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sağ taraf: Soru formu -->
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">
+                        <i class="fas fa-question-circle"></i> Yeni Soru Sor
+                    </h3>
+                    <span class="badge bg-light text-dark">
+                        @User.Identity?.Name
+                    </span>
+                </div>
+
+                <div class="card-body">
+
+                    @* Genel hata özeti *@
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")">
+                        Lütfen formu kontrol edin.
+                    </div>
+
+                    <form asp-action="Ask" asp-controller="Question" method="post">
+                        @Html.AntiForgeryToken()
+
+                        <!-- Kategori -->
+                        <div class="mb-3">
+                            <label asp-for="CategoryId" class="form-label">
+                                <i class="fas fa-folder-open"></i> Kategori
+                            </label>
+                            <select asp-for="CategoryId" class="form-select">
+                                <option value="">Kategori seçin</option>
+                                @foreach (var category in (IEnumerable<SoruCevapPortalı.Models.Category>)ViewBag.Categories)
+                                {
+                                    <option value="@category.Id">@category.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="CategoryId" class="text-danger"></span>
+                        </div>
+
+                        <!-- Başlık -->
+                        <div class="mb-3">
+                            <label asp-for="Title" class="form-label">
+                                <i class="fas fa-heading"></i> Soru Başlığı
+                            </label>
+                            <input asp-for="Title" class="form-control"
+                                   placeholder="Sorunuzu kısa ve net bir cümleyle özetleyin" />
+                            <small class="form-text text-muted">
+                                Örnek: "ASP.NET Core'da Identity ile rol bazlı yetkilendirme nasıl yapılır?"
+                            </small>
+                            <span asp-validation-for="Title" class="text-danger"></span>
+                        </div>
+
+                        <!-- İçerik -->
+                        <div class="mb-3">
+                            <label asp-for="Content" class="form-label">
+                                <i class="fas fa-align-left"></i> Detaylı Açıklama
+                            </label>
+                            <textarea asp-for="Content" class="form-control" rows="8"
+                                      placeholder="Problemi detaylıca anlatın, hangi adımları denediğinizi ve nerede takıldığınızı yazın."></textarea>
+                            <span asp-validation-for="Content" class="text-danger"></span>
+                        </div>
+
+                        <!-- Butonlar -->
+                        <div class="d-flex justify-content-between">
+                            <a href="~/Question" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Geri Dön
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Soruyu Gönder
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alt bilgi / kurallar -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-body small text-muted">
+                    <i class="fas fa-info-circle"></i>
+                    Soru göndererek topluluk kurallarını kabul etmiş olursunuz. Spam, hakaret ve alakasız içerikler silinebilir.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

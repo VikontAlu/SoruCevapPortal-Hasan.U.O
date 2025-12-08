@@ -1,5 +1,4 @@
-﻿using SoruCevapPortalı.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SoruCevapPortalı.Models
@@ -33,21 +32,26 @@ namespace SoruCevapPortalı.Models
         [Display(Name = "Çözüldü mü?")]
         public bool IsSolved { get; set; } = false;
 
-        // Foreign Keys
-        [Display(Name = "Kullanıcı")]
-        public string? UserId { get; set; }
+        // ❗ Kullanıcı ID'si formdan GELMEZ, backend doldurur.
+        // Bu yüzden [Required] KOYMUYORUZ.
+        public string ApplicationUserId { get; set; } = string.Empty;
 
+        [Required(ErrorMessage = "Kategori seçilmelidir!")]
         [Display(Name = "Kategori")]
         public int CategoryId { get; set; }
 
-        // Navigation Properties
-        [ForeignKey("UserId")]
-        public virtual ApplicationUser? User { get; set; }
+        // ------------- NAVIGATION -------------
 
-        [ForeignKey("CategoryId")]
-        public virtual Category? Category { get; set; }
+        [ForeignKey(nameof(ApplicationUserId))]
+        public virtual ApplicationUser ApplicationUser { get; set; } = null!;
 
-        public virtual ICollection<Answer> Answers { get; set; } = new HashSet<Answer>();
-        public virtual ICollection<QuestionVote> Votes { get; set; } = new HashSet<QuestionVote>();
+        [ForeignKey(nameof(CategoryId))]
+        public virtual Category Category { get; set; } = null!;
+
+        // Soruya ait cevaplar
+        public virtual ICollection<Answer> Answers { get; set; } = new List<Answer>();
+
+        // Soruya ait oylar
+        public virtual ICollection<QuestionVote> Votes { get; set; } = new List<QuestionVote>();
     }
 }

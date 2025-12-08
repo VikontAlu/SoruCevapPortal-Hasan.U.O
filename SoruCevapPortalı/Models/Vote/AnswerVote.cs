@@ -8,20 +8,17 @@ namespace SoruCevapPortalı.Models
         [Key]
         public int Id { get; set; }
 
-        [Display(Name = "Oy Türü")]
-        public bool IsUpVote { get; set; }
-
-        [Display(Name = "Cevap")]
+        [Required]
         public int AnswerId { get; set; }
 
-        [Display(Name = "Kullanıcı")]
-        public string? UserId { get; set; }
+        [Required]
+        public string ApplicationUserId { get; set; } = string.Empty;
 
-        // Navigation Properties
+        
+        public bool IsUpVote { get; set; }
+
+        // Navigation
         [ForeignKey("AnswerId")]
-        public virtual Answer? Answer { get; set; }
-
-        [ForeignKey("UserId")]
-        public virtual ApplicationUser? User { get; set; }
+        public virtual Answer Answer { get; set; } = null!;
     }
 }

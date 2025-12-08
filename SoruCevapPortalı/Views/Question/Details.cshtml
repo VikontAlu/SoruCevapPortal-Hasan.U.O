@@ -1,0 +1,150 @@
+﻿@model SoruCevapPortalı.Models.Question
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+
+    <!-- SORU -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between">
+            <h4 class="mb-0">@Model.Title</h4>
+            <span class="badge bg-light text-dark">
+                👁 @Model.ViewCount görüntülenme
+            </span>
+        </div>
+
+        <div class="card-body">
+
+            <!-- OYLAMA -->
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <button class="btn btn-outline-success"
+                        onclick="voteQuestion(@Model.Id, true)">
+                    ▲
+                </button>
+
+                <span id="question-score" class="fs-4 fw-bold">
+                    @Model.VoteCount
+                </span>
+
+                <button class="btn btn-outline-danger"
+                        onclick="voteQuestion(@Model.Id, false)">
+                    ▼
+                </button>
+            </div>
+
+            <!-- META -->
+            <div class="text-muted mb-2">
+                <strong>@Model.ApplicationUser?.UserName</strong> tarafından soruldu |
+                @Model.CreatedDate.ToString("dd.MM.yyyy HH:mm")
+            </div>
+
+            <span class="badge bg-info mb-3">
+                📁 @Model.Category?.Name
+            </span>
+
+            <div class="mt-3 bg-light p-3 rounded">
+                @Html.Raw(Model.Content.Replace("\n", "<br>"))
+            </div>
+
+            @if (Model.IsSolved)
+            {
+                <div class="alert alert-success mt-3">
+                    ✅ Bu soru çözüldü
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- CEVAPLAR -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            💬 Cevaplar (@Model.Answers.Count)
+        </div>
+
+        <div class="card-body">
+            @if (Model.Answers.Any())
+            {
+                foreach (var answer in Model.Answers.OrderByDescending(a => a.CreatedDate))
+                {
+                    <div class="border-bottom pb-3 mb-3">
+                        <strong>@answer.ApplicationUser?.UserName</strong>
+                        <small class="text-muted ms-2">
+                            @answer.CreatedDate.ToString("dd.MM.yyyy HH:mm")
+                        </small>
+
+                        <p class="mt-2 mb-0">
+                            @Html.Raw(answer.Content.Replace("\n", "<br>"))
+                        </p>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    Henüz cevap yok, ilk cevabı sen yaz!
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- CEVAP YAZ -->
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-info text-white">
+                ✍ Cevap Yaz
+            </div>
+            <div class="card-body">
+                <form method="post" action="/Answer/Add">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="questionId" value="@Model.Id" />
+                    <textarea name="content" class="form-control" rows="5" required></textarea>
+                    <button type="submit" class="btn btn-primary mt-2">
+                        Gönder
+                    </button>
+                </form>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info mt-3">
+            Cevap yazabilmek için
+            <a href="/Identity/Account/Login">giriş yapmalısınız</a>.
+        </div>
+    }
+</div>
+
+@section Scripts {
+    @Html.AntiForgeryToken()
+
+    <script>
+        function voteQuestion(questionId, isUpVote) {
+            fetch('/Question/Vote', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken':
+                        document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    questionId: questionId,
+                    isUpVote: isUpVote
+                }),
+                credentials: 'same-origin'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('question-vote-' + questionId).innerText
+                        = data.totalScore;
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+    </script>
+
+}
