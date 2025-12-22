@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SoruCevapPortalı.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialCleanSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -189,15 +189,21 @@ namespace SoruCevapPortalı.Migrations
                     ViewCount = table.Column<int>(type: "int", nullable: false),
                     VoteCount = table.Column<int>(type: "int", nullable: false),
                     IsSolved = table.Column<bool>(type: "bit", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    CategoryId = table.Column<int>(type: "int", nullable: false)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CategoryId = table.Column<int>(type: "int", nullable: false),
+                    ApplicationUserId1 = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Questions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Questions_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Questions_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Questions_AspNetUsers_ApplicationUserId1",
+                        column: x => x.ApplicationUserId1,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -214,20 +220,27 @@ namespace SoruCevapPortalı.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 5000, nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     VoteCount = table.Column<int>(type: "int", nullable: false),
+                    IsAccepted = table.Column<bool>(type: "bit", nullable: false),
                     IsBestAnswer = table.Column<bool>(type: "bit", nullable: false),
                     QuestionId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ApplicationUserId1 = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Answers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Answers_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Answers_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Answers_AspNetUsers_ApplicationUserId1",
+                        column: x => x.ApplicationUserId1,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -244,16 +257,16 @@ namespace SoruCevapPortalı.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    IsUpVote = table.Column<bool>(type: "bit", nullable: false),
                     QuestionId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsUpVote = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_QuestionVotes", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_QuestionVotes_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_QuestionVotes_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -271,9 +284,9 @@ namespace SoruCevapPortalı.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    IsUpVote = table.Column<bool>(type: "bit", nullable: false),
                     AnswerId = table.Column<int>(type: "int", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsUpVote = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -285,11 +298,22 @@ namespace SoruCevapPortalı.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_AnswerVotes_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_AnswerVotes_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Answers_ApplicationUserId",
+                table: "Answers",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Answers_ApplicationUserId1",
+                table: "Answers",
+                column: "ApplicationUserId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Answers_QuestionId",
@@ -297,19 +321,15 @@ namespace SoruCevapPortalı.Migrations
                 column: "QuestionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Answers_UserId",
-                table: "Answers",
-                column: "UserId");
+                name: "IX_AnswerVotes_AnswerId_ApplicationUserId",
+                table: "AnswerVotes",
+                columns: new[] { "AnswerId", "ApplicationUserId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_AnswerVotes_AnswerId",
+                name: "IX_AnswerVotes_ApplicationUserId",
                 table: "AnswerVotes",
-                column: "AnswerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AnswerVotes_UserId",
-                table: "AnswerVotes",
-                column: "UserId");
+                column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -351,24 +371,30 @@ namespace SoruCevapPortalı.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Questions_ApplicationUserId",
+                table: "Questions",
+                column: "ApplicationUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Questions_ApplicationUserId1",
+                table: "Questions",
+                column: "ApplicationUserId1");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Questions_CategoryId",
                 table: "Questions",
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Questions_UserId",
-                table: "Questions",
-                column: "UserId");
+                name: "IX_QuestionVotes_ApplicationUserId",
+                table: "QuestionVotes",
+                column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_QuestionVotes_QuestionId",
+                name: "IX_QuestionVotes_QuestionId_ApplicationUserId",
                 table: "QuestionVotes",
-                column: "QuestionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_QuestionVotes_UserId",
-                table: "QuestionVotes",
-                column: "UserId");
+                columns: new[] { "QuestionId", "ApplicationUserId" },
+                unique: true);
         }
 
         /// <inheritdoc />

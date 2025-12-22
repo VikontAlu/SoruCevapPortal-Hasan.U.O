@@ -1,0 +1,106 @@
+﻿@model ApplicationUser
+@{
+    ViewData["Title"] = "Kullanıcı Detayı";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-user text-info"></i> Kullanıcı Detayı</h2>
+    <a href="/Admin/Users" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left"></i> Listeye Dön
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Kullanıcı Bilgileri</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Kullanıcı Adı:</strong>
+                    <p>@Model.UserName</p>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Email:</strong>
+                    <p>@Model.Email</p>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Ad Soyad:</strong>
+                    <p>
+                        @if (!string.IsNullOrEmpty(Model.FirstName) || !string.IsNullOrEmpty(Model.LastName))
+                        {
+                            <text>@Model.FirstName @Model.LastName</text>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Belirtilmemiş</span>
+                        }
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Kayıt Tarihi:</strong>
+                    <p>@Model.RegistrationDate.ToString("dd.MM.yyyy HH:mm")</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">İstatistikler</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <h3 class="text-primary">@ViewBag.TotalQuestions</h3>
+                            <p class="mb-0">Toplam Soru</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <h3 class="text-success">@ViewBag.TotalAnswers</h3>
+                            <p class="mb-0">Toplam Cevap</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <h3 class="text-warning">@ViewBag.MemberSince</h3>
+                            <p class="mb-0">Üyelik Tarihi</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kullanıcının Soruları -->
+        <div class="card mt-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Son Soruları</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.Questions.Any())
+                {
+                    foreach (var question in Model.Questions.Take(5))
+                    {
+                        <div class="border-bottom pb-2 mb-2">
+                            <h6>@question.Title</h6>
+                            <small class="text-muted">@question.CreatedDate.ToString("dd.MM.yyyy HH:mm")</small>
+                            <span class="badge bg-info float-end">@question.ViewCount görüntülenme</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="text-muted">Henüz soru sormamış.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

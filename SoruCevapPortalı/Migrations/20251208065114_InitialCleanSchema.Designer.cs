@@ -12,8 +12,8 @@ using SoruCevapPortalı.Data;
 namespace SoruCevapPortalı.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251117095049_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251208065114_InitialCleanSchema")]
+    partial class InitialCleanSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -170,12 +170,23 @@ namespace SoruCevapPortalı.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApplicationUserId1")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Content")
                         .IsRequired()
+                        .HasMaxLength(5000)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsAccepted")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsBestAnswer")
                         .HasColumnType("bit");
@@ -186,19 +197,46 @@ namespace SoruCevapPortalı.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int>("VoteCount")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("ApplicationUserId1");
+
                     b.HasIndex("QuestionId");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("Answers");
+                });
+
+            modelBuilder.Entity("SoruCevapPortalı.Models.AnswerVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AnswerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsUpVote")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("AnswerId", "ApplicationUserId")
+                        .IsUnique();
+
+                    b.ToTable("AnswerVotes");
                 });
 
             modelBuilder.Entity("SoruCevapPortalı.Models.ApplicationUser", b =>
@@ -309,59 +347,6 @@ namespace SoruCevapPortalı.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("SoruCevapPortalı.Models.NewFolder.AnswerVote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AnswerId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsUpVote")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AnswerId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("AnswerVotes");
-                });
-
-            modelBuilder.Entity("SoruCevapPortalı.Models.NewFolder.QuestionVote", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsUpVote")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("QuestionId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("QuestionVotes");
-                });
-
             modelBuilder.Entity("SoruCevapPortalı.Models.Question", b =>
                 {
                     b.Property<int>("Id")
@@ -369,6 +354,13 @@ namespace SoruCevapPortalı.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApplicationUserId1")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
@@ -391,9 +383,6 @@ namespace SoruCevapPortalı.Migrations
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int>("ViewCount")
                         .HasColumnType("int");
 
@@ -402,11 +391,41 @@ namespace SoruCevapPortalı.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("ApplicationUserId1");
+
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("UserId");
-
                     b.ToTable("Questions");
+                });
+
+            modelBuilder.Entity("SoruCevapPortalı.Models.QuestionVote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsUpVote")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("QuestionId", "ApplicationUserId")
+                        .IsUnique();
+
+                    b.ToTable("QuestionVotes");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -462,22 +481,28 @@ namespace SoruCevapPortalı.Migrations
 
             modelBuilder.Entity("SoruCevapPortalı.Models.Answer", b =>
                 {
+                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "ApplicationUser")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", null)
+                        .WithMany("Answers")
+                        .HasForeignKey("ApplicationUserId1");
+
                     b.HasOne("SoruCevapPortalı.Models.Question", "Question")
                         .WithMany("Answers")
                         .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "User")
-                        .WithMany("Answers")
-                        .HasForeignKey("UserId");
+                    b.Navigation("ApplicationUser");
 
                     b.Navigation("Question");
-
-                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SoruCevapPortalı.Models.NewFolder.AnswerVote", b =>
+            modelBuilder.Entity("SoruCevapPortalı.Models.AnswerVote", b =>
                 {
                     b.HasOne("SoruCevapPortalı.Models.Answer", "Answer")
                         .WithMany("Votes")
@@ -485,49 +510,53 @@ namespace SoruCevapPortalı.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "User")
+                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", null)
                         .WithMany("AnswerVotes")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Answer");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SoruCevapPortalı.Models.NewFolder.QuestionVote", b =>
-                {
-                    b.HasOne("SoruCevapPortalı.Models.Question", "Question")
-                        .WithMany("Votes")
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "User")
-                        .WithMany("QuestionVotes")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Question");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SoruCevapPortalı.Models.Question", b =>
                 {
+                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "ApplicationUser")
+                        .WithMany()
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", null)
+                        .WithMany("Questions")
+                        .HasForeignKey("ApplicationUserId1");
+
                     b.HasOne("SoruCevapPortalı.Models.Category", "Category")
                         .WithMany("Questions")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "User")
-                        .WithMany("Questions")
-                        .HasForeignKey("UserId");
+                    b.Navigation("ApplicationUser");
 
                     b.Navigation("Category");
+                });
 
-                    b.Navigation("User");
+            modelBuilder.Entity("SoruCevapPortalı.Models.QuestionVote", b =>
+                {
+                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", null)
+                        .WithMany("QuestionVotes")
+                        .HasForeignKey("ApplicationUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SoruCevapPortalı.Models.Question", "Question")
+                        .WithMany("Votes")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("SoruCevapPortalı.Models.Answer", b =>

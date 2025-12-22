@@ -1,0 +1,110 @@
+﻿@model List<Question>
+@{
+    ViewData["Title"] = "Tüm Sorular";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-question-circle text-primary"></i> Tüm Sorular</h1>
+        @if (User.Identity.IsAuthenticated)
+        {
+            <a href="/Question/Ask" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Yeni Soru Sor
+            </a>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> Henüz soru bulunmuyor. İlk soruyu sen sor!
+        </div>
+
+        @if (User.Identity.IsAuthenticated)
+        {
+            <div class="text-center mt-4">
+                <a href="/Question/Ask" class="btn btn-success btn-lg">
+                    <i class="fas fa-plus-circle"></i> İlk Soruyu Sor
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="text-center mt-4">
+                <a href="/Identity/Account/Login" class="btn btn-primary btn-lg">
+                    <i class="fas fa-sign-in-alt"></i> Giriş Yap ve İlk Soruyu Sor
+                </a>
+            </div>
+        }
+    }
+    else
+    {
+        foreach (var question in Model)
+        {
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- İstatistikler -->
+                        <div class="col-md-1 text-center">
+                            <div class="bg-light p-2 rounded mb-2">
+                                <div class="fw-bold text-primary fs-5">@question.ViewCount</div>
+                                <small class="text-muted">Görüntülenme</small>
+                            </div>
+                            <div class="bg-light p-2 rounded">
+                                <div class="fw-bold text-success fs-5">@question.Answers.Count</div>
+                                <small class="text-muted">Cevap</small>
+                            </div>
+                        </div>
+
+                        <!-- Soru İçeriği -->
+                        <div class="col-md-11">
+                            <h5 class="card-title">
+                                <a href="/Question/Details/@question.Id" class="text-decoration-none text-dark">
+                                    @question.Title
+                                </a>
+                            </h5>
+                            <p class="card-text text-muted mb-3">
+                                @(question.Content.Length > 250 ? question.Content.Substring(0, 250) + "..." : question.Content)
+                            </p>
+
+                            <!-- Etiketler ve Bilgiler -->
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-folder"></i> @question.Category?.Name
+                                    </span>
+                                    <small class="text-muted ms-3">
+                                        <i class="fas fa-user"></i> @question.ApplicationUser?.UserName
+                                    </small>
+                                    <small class="text-muted ms-3">
+                                        <i class="fas fa-calendar"></i> @question.CreatedDate.ToString("dd.MM.yyyy HH:mm")
+                                    </small>
+                                </div>
+
+                                @if (question.IsSolved)
+                                {
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> Çözüldü
+                                    </span>
+                                }
+                                else if (question.Answers.Count > 0)
+                                {
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-comments"></i> @question.Answers.Count cevap
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-clock"></i> Beklemede
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
