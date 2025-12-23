@@ -1,8 +1,9 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SoruCevapPortalı.Data;
 using SoruCevapPortalı.Models;
+using System.Diagnostics;
 
 namespace SoruCevapPortalı.Controllers
 {
@@ -161,6 +162,70 @@ namespace SoruCevapPortalı.Controllers
             {
                 return Json(new { success = false, message = ex.Message });
             }
+        }
+        public async Task<IActionResult> FixAdmin([FromServices] UserManager<ApplicationUser> userManager, [FromServices] RoleManager<IdentityRole> roleManager)
+        {
+            var adminEmail = "admin@admin.com";
+            // Standartlara uygun GÜÇLÜ bir şifre verelim ki politika hatası ihtimali %0 olsun.
+            var password = "Admin123!";
+            var logs = new List<string>();
+
+            try
+            {
+                // 1. Önce eski admin varsa SİLELİM (Temiz kurulum için)
+                var oldUser = await userManager.FindByEmailAsync(adminEmail);
+                if (oldUser != null)
+                {
+                    await userManager.DeleteAsync(oldUser);
+                    logs.Add("🗑️ Eski hatalı admin kullanıcısı silindi.");
+                }
+
+                // 2. Rolleri Kontrol Et
+                if (!await roleManager.RoleExistsAsync("Admin"))
+                {
+                    await roleManager.CreateAsync(new IdentityRole("Admin"));
+                    logs.Add("✅ Admin rolü yoktu, oluşturuldu.");
+                }
+
+                if (!await roleManager.RoleExistsAsync("User"))
+                    await roleManager.CreateAsync(new IdentityRole("User"));
+
+                // 3. Kullanıcıyı SIFIRDAN Oluştur
+                var newAdmin = new ApplicationUser
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    EmailConfirmed = true, // Mail onayı istemesin
+                    FirstName = "Sistem",
+                    LastName = "Yöneticisi",
+                    RegistrationDate = DateTime.Now
+                };
+
+                var result = await userManager.CreateAsync(newAdmin, password);
+
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(newAdmin, "Admin");
+                    logs.Add($"🎉 YENİ Admin başarıyla oluşturuldu.");
+                    logs.Add($"📧 Email: {adminEmail}");
+                    logs.Add($"🔑 Şifre: {password}"); // Şifreyi Admin123! yaptık
+                    logs.Add("👉 Lütfen bu bilgilerle giriş yapın.");
+                }
+                else
+                {
+                    logs.Add("❌ KULLANICI OLUŞTURULAMADI!");
+                    foreach (var error in result.Errors)
+                    {
+                        logs.Add($"⛔ Hata: {error.Code} - {error.Description}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                logs.Add($"💥 Kritik Hata: {ex.Message}");
+            }
+
+            return Content(string.Join("\n", logs));
         }
     }
 }

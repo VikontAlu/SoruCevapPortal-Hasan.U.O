@@ -12,8 +12,8 @@ using SoruCevapPortalı.Data;
 namespace SoruCevapPortalı.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251208065114_InitialCleanSchema")]
-    partial class InitialCleanSchema
+    [Migration("20251222213902_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -174,9 +174,6 @@ namespace SoruCevapPortalı.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("ApplicationUserId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasMaxLength(5000)
@@ -203,8 +200,6 @@ namespace SoruCevapPortalı.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("ApplicationUserId1");
 
                     b.HasIndex("QuestionId");
 
@@ -359,9 +354,6 @@ namespace SoruCevapPortalı.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("ApplicationUserId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
@@ -392,8 +384,6 @@ namespace SoruCevapPortalı.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("ApplicationUserId1");
 
                     b.HasIndex("CategoryId");
 
@@ -482,14 +472,10 @@ namespace SoruCevapPortalı.Migrations
             modelBuilder.Entity("SoruCevapPortalı.Models.Answer", b =>
                 {
                     b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "ApplicationUser")
-                        .WithMany()
+                        .WithMany("Answers")
                         .HasForeignKey("ApplicationUserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", null)
-                        .WithMany("Answers")
-                        .HasForeignKey("ApplicationUserId1");
 
                     b.HasOne("SoruCevapPortalı.Models.Question", "Question")
                         .WithMany("Answers")
@@ -522,14 +508,10 @@ namespace SoruCevapPortalı.Migrations
             modelBuilder.Entity("SoruCevapPortalı.Models.Question", b =>
                 {
                     b.HasOne("SoruCevapPortalı.Models.ApplicationUser", "ApplicationUser")
-                        .WithMany()
+                        .WithMany("Questions")
                         .HasForeignKey("ApplicationUserId")
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
-
-                    b.HasOne("SoruCevapPortalı.Models.ApplicationUser", null)
-                        .WithMany("Questions")
-                        .HasForeignKey("ApplicationUserId1");
 
                     b.HasOne("SoruCevapPortalı.Models.Category", "Category")
                         .WithMany("Questions")

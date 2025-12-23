@@ -7,27 +7,56 @@ namespace SoruCevapPortalı.Repositories
     public class Repository<T> : IRepository<T> where T : class
     {
         private readonly DbContext _context;
-        private readonly DbSet<T> _dbSet;
+        internal DbSet<T> dbSet;
 
         public Repository(DbContext context)
         {
             _context = context;
-            _dbSet = context.Set<T>();
+            this.dbSet = _context.Set<T>();
         }
 
-        public async Task<T?> GetByIdAsync(int id) => await _dbSet.FindAsync(id);
+        public async Task<T?> GetAsync(Expression<Func<T, bool>> filter, string? includeProperties = null)
+        {
+            IQueryable<T> query = dbSet;
 
-        public async Task<IEnumerable<T>> GetAllAsync() => await _dbSet.ToListAsync();
+            if (filter != null)
+                query = query.Where(filter);
 
-        public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
-            => await _dbSet.Where(predicate).ToListAsync();
+            if (includeProperties != null)
+            {
+                foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(includeProp);
+                }
+            }
 
-        public async Task AddAsync(T entity) => await _dbSet.AddAsync(entity);
+            return await query.FirstOrDefaultAsync();
+        }
 
-        public void Update(T entity) => _dbSet.Update(entity);
+        public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, string? includeProperties = null)
+        {
+            IQueryable<T> query = dbSet;
 
-        public void Remove(T entity) => _dbSet.Remove(entity);
+            if (filter != null)
+                query = query.Where(filter);
 
-        public async Task SaveAsync() => await _context.SaveChangesAsync();
+            if (includeProperties != null)
+            {
+                foreach (var includeProp in includeProperties.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    query = query.Include(includeProp);
+                }
+            }
+
+            return await query.ToListAsync();
+        }
+
+        public async Task AddAsync(T entity) => await dbSet.AddAsync(entity);
+
+        public void Update(T entity) => dbSet.Update(entity);
+
+        public void Remove(T entity) => dbSet.Remove(entity);
+
+        public void RemoveRange(IEnumerable<T> entities) => dbSet.RemoveRange(entities);
     }
 }

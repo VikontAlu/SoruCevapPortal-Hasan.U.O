@@ -1,59 +1,52 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
-using SoruCevapPortalı.Data;
 using SoruCevapPortalı.Models;
+using SoruCevapPortalı.Interfaces; // UnitOfWork için
 using System.Security.Claims;
 
 namespace SoruCevapPortalı.Controllers
 {
     public class QuestionController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public QuestionController(ApplicationDbContext context)
+        public QuestionController(IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
         }
 
-        // ================= INDEX =================
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var questions = _context.Questions
-                .Include(q => q.Category)
-                .Include(q => q.ApplicationUser)
-                .Include(q => q.Answers)
-                .OrderByDescending(q => q.CreatedDate)
-                .ToList();
+            // Repository deseni ile verileri çekiyoruz
+            var questions = await _unitOfWork.Questions.GetAllAsync(null, "Category,ApplicationUser,Answers");
 
-            return View(questions);
+            // ❗ DÜZELTME BURADA: .ToList() eklendi
+            return View(questions.OrderByDescending(q => q.CreatedDate).ToList());
         }
 
         // ================= DETAILS =================
-        public IActionResult Details(int id)
+        public async Task<IActionResult> Details(int id)
         {
-            var question = _context.Questions
-                .Include(q => q.Category)
-                .Include(q => q.ApplicationUser)
-                .Include(q => q.Answers)
-                    .ThenInclude(a => a.ApplicationUser)
-                .Include(q => q.Votes)
-                .FirstOrDefault(q => q.Id == id);
+            // ThenInclude (Answers.ApplicationUser) string olarak şöyle yazılır: "Answers.ApplicationUser"
+            var question = await _unitOfWork.Questions.GetAsync(
+                q => q.Id == id,
+                "Category,ApplicationUser,Answers,Answers.ApplicationUser,Votes");
 
             if (question == null)
                 return NotFound();
 
             question.ViewCount++;
-            _context.SaveChanges();
+            _unitOfWork.Questions.Update(question); // Update metodu void olduğu için await yok
+            await _unitOfWork.CompleteAsync(); // Kaydet
 
             return View(question);
         }
 
         // ================= ASK (GET) =================
         [Authorize]
-        public IActionResult Ask()
+        public async Task<IActionResult> Ask()
         {
-            ViewBag.Categories = _context.Categories.ToList();
+            ViewBag.Categories = await _unitOfWork.Categories.GetAllAsync();
             return View();
         }
 
@@ -61,94 +54,54 @@ namespace SoruCevapPortalı.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public IActionResult Ask(Question question)
+        public async Task<IActionResult> Ask(Question question)
         {
             if (!ModelState.IsValid)
             {
-                ViewBag.Categories = _context.Categories.ToList();
+                ViewBag.Categories = await _unitOfWork.Categories.GetAllAsync();
                 return View(question);
             }
 
-            question.ApplicationUserId =
-                User.FindFirstValue(ClaimTypes.NameIdentifier);
-
+            question.ApplicationUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             question.CreatedDate = DateTime.Now;
             question.ViewCount = 0;
             question.VoteCount = 0;
             question.IsSolved = false;
 
-            _context.Questions.Add(question);
-            _context.SaveChanges();
+            await _unitOfWork.Questions.AddAsync(question);
+            await _unitOfWork.CompleteAsync();
 
             return RedirectToAction(nameof(Details), new { id = question.Id });
-        }
-
-        // ================= AJAX GET VOTES =================
-        [HttpGet]
-        public JsonResult GetVotes(int id)
-        {
-            var up = _context.QuestionVotes
-                .Count(v => v.QuestionId == id && v.IsUpVote);
-
-            var down = _context.QuestionVotes
-                .Count(v => v.QuestionId == id && !v.IsUpVote);
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            string userVote = "none";
-
-            if (userId != null)
-            {
-                var vote = _context.QuestionVotes
-                    .FirstOrDefault(v =>
-                        v.QuestionId == id &&
-                        v.ApplicationUserId == userId
-                    );
-
-                if (vote != null)
-                    userVote = vote.IsUpVote ? "up" : "down";
-            }
-
-            return Json(new
-            {
-                success = true,
-                upvotes = up,
-                downvotes = down,
-                totalScore = up - down,
-                userVote
-            });
         }
 
         // ================= AJAX VOTE =================
         [HttpPost]
         [Authorize]
-        public JsonResult Vote(int questionId, bool isUpVote)
+        public async Task<JsonResult> Vote(int questionId, bool isUpVote)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (userId == null)
                 return Json(new { success = false, message = "Giriş yapmalısınız." });
 
-            var question = _context.Questions
-                .FirstOrDefault(q => q.Id == questionId);
-
+            var question = await _unitOfWork.Questions.GetAsync(q => q.Id == questionId);
             if (question == null)
                 return Json(new { success = false, message = "Soru bulunamadı." });
 
-            var existingVote = _context.QuestionVotes
-                .FirstOrDefault(v =>
-                    v.QuestionId == questionId &&
-                    v.ApplicationUserId == userId
-                );
+            var existingVote = await _unitOfWork.QuestionVotes.GetAsync(v => v.QuestionId == questionId && v.ApplicationUserId == userId);
 
             if (existingVote != null)
             {
                 if (existingVote.IsUpVote == isUpVote)
-                    _context.QuestionVotes.Remove(existingVote);
+                    _unitOfWork.QuestionVotes.Remove(existingVote);
                 else
+                {
                     existingVote.IsUpVote = isUpVote;
+                    _unitOfWork.QuestionVotes.Update(existingVote);
+                }
             }
             else
             {
-                _context.QuestionVotes.Add(new QuestionVote
+                await _unitOfWork.QuestionVotes.AddAsync(new QuestionVote
                 {
                     QuestionId = questionId,
                     ApplicationUserId = userId,
@@ -156,34 +109,14 @@ namespace SoruCevapPortalı.Controllers
                 });
             }
 
-            _context.SaveChanges();
+            await _unitOfWork.CompleteAsync();
 
-            var up = _context.QuestionVotes
-                .Count(v => v.QuestionId == questionId && v.IsUpVote);
+            // Güncel sayıları hesapla
+            var allVotes = await _unitOfWork.QuestionVotes.GetAllAsync(v => v.QuestionId == questionId);
+            var up = allVotes.Count(v => v.IsUpVote);
+            var down = allVotes.Count(v => !v.IsUpVote);
 
-            var down = _context.QuestionVotes
-                .Count(v => v.QuestionId == questionId && !v.IsUpVote);
-
-            return Json(new
-            {
-                success = true,
-                totalScore = up - down
-            });
-        }
-
-        // ================= BY CATEGORY =================
-        public IActionResult ByCategory(int id)
-        {
-            var category = _context.Categories
-                .Include(c => c.Questions)
-                    .ThenInclude(q => q.ApplicationUser)
-                .FirstOrDefault(c => c.Id == id);
-
-            if (category == null)
-                return NotFound();
-
-            ViewBag.CategoryName = category.Name;
-            return View(category.Questions.ToList());
+            return Json(new { success = true, totalScore = up - down });
         }
     }
 }

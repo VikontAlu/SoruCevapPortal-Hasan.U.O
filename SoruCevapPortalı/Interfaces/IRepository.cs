@@ -4,12 +4,12 @@ namespace SoruCevapPortalı.Interfaces
 {
     public interface IRepository<T> where T : class
     {
-        Task<T?> GetByIdAsync(int id);
-        Task<IEnumerable<T>> GetAllAsync();
-        Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
+        // İlişkili tabloları getirebilmek için 'includeProperties' eklendi
+        Task<T?> GetAsync(Expression<Func<T, bool>> filter, string? includeProperties = null);
+        Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, string? includeProperties = null);
         Task AddAsync(T entity);
         void Update(T entity);
         void Remove(T entity);
-        Task SaveAsync();
+        void RemoveRange(IEnumerable<T> entities); // Çoklu silme için
     }
 }

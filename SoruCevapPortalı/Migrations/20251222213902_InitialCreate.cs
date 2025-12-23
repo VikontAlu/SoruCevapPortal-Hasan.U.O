@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SoruCevapPortalı.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCleanSchema : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -190,8 +190,7 @@ namespace SoruCevapPortalı.Migrations
                     VoteCount = table.Column<int>(type: "int", nullable: false),
                     IsSolved = table.Column<bool>(type: "bit", nullable: false),
                     ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CategoryId = table.Column<int>(type: "int", nullable: false),
-                    ApplicationUserId1 = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    CategoryId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -199,11 +198,6 @@ namespace SoruCevapPortalı.Migrations
                     table.ForeignKey(
                         name: "FK_Questions_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Questions_AspNetUsers_ApplicationUserId1",
-                        column: x => x.ApplicationUserId1,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -227,8 +221,7 @@ namespace SoruCevapPortalı.Migrations
                     IsAccepted = table.Column<bool>(type: "bit", nullable: false),
                     IsBestAnswer = table.Column<bool>(type: "bit", nullable: false),
                     QuestionId = table.Column<int>(type: "int", nullable: false),
-                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ApplicationUserId1 = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -236,11 +229,6 @@ namespace SoruCevapPortalı.Migrations
                     table.ForeignKey(
                         name: "FK_Answers_AspNetUsers_ApplicationUserId",
                         column: x => x.ApplicationUserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
-                        name: "FK_Answers_AspNetUsers_ApplicationUserId1",
-                        column: x => x.ApplicationUserId1,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
@@ -311,11 +299,6 @@ namespace SoruCevapPortalı.Migrations
                 column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Answers_ApplicationUserId1",
-                table: "Answers",
-                column: "ApplicationUserId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Answers_QuestionId",
                 table: "Answers",
                 column: "QuestionId");
@@ -374,11 +357,6 @@ namespace SoruCevapPortalı.Migrations
                 name: "IX_Questions_ApplicationUserId",
                 table: "Questions",
                 column: "ApplicationUserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Questions_ApplicationUserId1",
-                table: "Questions",
-                column: "ApplicationUserId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Questions_CategoryId",

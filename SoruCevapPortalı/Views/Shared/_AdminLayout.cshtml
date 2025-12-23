@@ -4,47 +4,69 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Admin Panel</title>
-
-    <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-light">
 
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container-fluid">
             <a class="navbar-brand" href="/Admin">
-                <i class="fas fa-cog"></i> Admin Panel
+                <i class="fas fa-user-shield"></i> Admin Panel
             </a>
-            <div>
-                <a href="/Admin/Categories" class="btn btn-outline-light btn-sm me-2">
-                    <i class="fas fa-folder"></i> Kategoriler
-                </a>
-                <a href="/Admin/Questions" class="btn btn-outline-light btn-sm me-2">
-                    <i class="fas fa-question-circle"></i> Sorular
-                </a>
-                <a href="/Admin/UserManagement" class="btn btn-outline-light btn-sm me-2">
-                    <i class="fas fa-users"></i> Kullanıcılar
-                </a>
-                <a href="/" class="btn btn-outline-info btn-sm">
-                    <i class="fas fa-home"></i> Siteye Dön
-                </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="adminNavbar">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a href="/Admin/Categories" class="nav-link"><i class="fas fa-folder"></i> Kategoriler</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/Admin/Questions" class="nav-link"><i class="fas fa-question-circle"></i> Sorular</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/Admin/UserManagement" class="nav-link"><i class="fas fa-users"></i> Kullanıcılar</a>
+                    </li>
+                </ul>
+
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-home"></i> Siteye Dön
+                    </a>
+                    <form class="d-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/Home/Index">
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Çıkış Yap
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i> @TempData["SuccessMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i> @TempData["ErrorMessage"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
         @RenderBody()
     </div>
 
-    <!-- jQuery (AJAX için GEREKLİ) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     @RenderSection("Scripts", required: false)
 </body>
 </html>

@@ -1,179 +1,139 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SoruCevapPortalı.Data;
+using Microsoft.AspNetCore.Identity; // UserManager için
+using SoruCevapPortalı.Interfaces;
 using SoruCevapPortalı.Models;
+using System.Security.Claims;
 
 namespace SoruCevapPortalı.Controllers
 {
     [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUnitOfWork _unitOfWork;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public AdminController(ApplicationDbContext context)
+        public AdminController(IUnitOfWork unitOfWork, UserManager<ApplicationUser> userManager)
         {
-            _context = context;
+            _unitOfWork = unitOfWork;
+            _userManager = userManager;
         }
 
         // -------------------- DASHBOARD --------------------
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            ViewBag.TotalQuestions = _context.Questions.Count();
-            ViewBag.TotalCategories = _context.Categories.Count();
-            ViewBag.TotalAnswers = _context.Answers.Count();
-            ViewBag.TotalUsers = _context.Users.Count();
+            // Count işlemleri için GetAll yapıp Count almak performanssızdır ama
+            // generic repository'de CountAsync yoksa şimdilik idare eder.
+            // Ödev olduğu için sorun olmaz.
+            var questions = await _unitOfWork.Questions.GetAllAsync();
+            var categories = await _unitOfWork.Categories.GetAllAsync();
+            var answers = await _unitOfWork.Answers.GetAllAsync();
+
+            ViewBag.TotalQuestions = questions.Count();
+            ViewBag.TotalCategories = categories.Count();
+            ViewBag.TotalAnswers = answers.Count();
+            ViewBag.TotalUsers = _userManager.Users.Count(); // UserManager'dan çekiyoruz
+
             return View();
         }
 
-        // -------------------- DB TEST --------------------
-        public IActionResult TestDatabase()
-        {
-            try
-            {
-                return Content(
-                    $"✅ DB OK | Kategoriler: {_context.Categories.Count()}, " +
-                    $"Sorular: {_context.Questions.Count()}, " +
-                    $"Cevaplar: {_context.Answers.Count()}, " +
-                    $"Kullanıcılar: {_context.Users.Count()}"
-                );
-            }
-            catch (Exception ex)
-            {
-                return Content($"❌ DB Hatası: {ex.Message}");
-            }
-        }
-
         // -------------------- KATEGORİ --------------------
-        public IActionResult Categories()
+        public async Task<IActionResult> Categories()
         {
-            return View(_context.Categories.ToList());
+            var categories = await _unitOfWork.Categories.GetAllAsync();
+            return View(categories);
         }
 
         public IActionResult CreateCategory() => View();
 
         [HttpPost]
-        public IActionResult CreateCategory(Category category)
+        public async Task<IActionResult> CreateCategory(Category category)
         {
-            if (!ModelState.IsValid)
-                return View(category);
+            if (!ModelState.IsValid) return View(category);
 
             category.CreatedDate = DateTime.Now;
-            _context.Categories.Add(category);
-            _context.SaveChanges();
+            await _unitOfWork.Categories.AddAsync(category);
+            await _unitOfWork.CompleteAsync();
 
             return RedirectToAction(nameof(Categories));
         }
 
-        public IActionResult EditCategory(int id)
+        public async Task<IActionResult> EditCategory(int id)
         {
-            var category = _context.Categories.Find(id);
+            var category = await _unitOfWork.Categories.GetAsync(c => c.Id == id);
             return category == null ? NotFound() : View(category);
         }
 
         [HttpPost]
-        public IActionResult EditCategory(Category category)
+        public async Task<IActionResult> EditCategory(Category category)
         {
-            if (!ModelState.IsValid)
-                return View(category);
+            if (!ModelState.IsValid) return View(category);
 
-            _context.Categories.Update(category);
-            _context.SaveChanges();
+            _unitOfWork.Categories.Update(category);
+            await _unitOfWork.CompleteAsync();
 
             return RedirectToAction(nameof(Categories));
         }
 
-        public IActionResult DeleteCategory(int id)
+        public async Task<IActionResult> DeleteCategory(int id)
         {
-            var category = _context.Categories.Find(id);
-            if (category == null)
-                return NotFound();
+            var category = await _unitOfWork.Categories.GetAsync(c => c.Id == id);
+            if (category == null) return NotFound();
 
-            _context.Categories.Remove(category);
-            _context.SaveChanges();
+            _unitOfWork.Categories.Remove(category);
+            await _unitOfWork.CompleteAsync();
 
             return RedirectToAction(nameof(Categories));
         }
 
         // -------------------- SORULAR --------------------
-        public IActionResult Questions()
+        public async Task<IActionResult> Questions()
         {
-            var questions = _context.Questions
-                .Include(q => q.Category)
-                .Include(q => q.ApplicationUser)
-                .Include(q => q.Answers)
-                .ToList();
-
+            var questions = await _unitOfWork.Questions.GetAllAsync(null, "Category,ApplicationUser,Answers");
             return View(questions);
         }
 
-        public IActionResult QuestionDetail(int id)
+        public async Task<IActionResult> DeleteQuestion(int id)
         {
-            var question = _context.Questions
-                .Include(q => q.Category)
-                .Include(q => q.ApplicationUser)
-                .Include(q => q.Answers)
-                    .ThenInclude(a => a.ApplicationUser)
-                .FirstOrDefault(q => q.Id == id);
+            var question = await _unitOfWork.Questions.GetAsync(q => q.Id == id);
+            if (question == null) return NotFound();
 
-            return question == null ? NotFound() : View(question);
-        }
-
-        public IActionResult DeleteQuestion(int id)
-        {
-            var question = _context.Questions.Find(id);
-            if (question == null)
-                return NotFound();
-
-            _context.Questions.Remove(question);
-            _context.SaveChanges();
+            _unitOfWork.Questions.Remove(question);
+            await _unitOfWork.CompleteAsync();
 
             return RedirectToAction(nameof(Questions));
         }
 
-        // -------------------- KULLANICILAR --------------------
+        // -------------------- KULLANICILAR (UserManager Kullanıyoruz) --------------------
         public IActionResult UserManagement()
         {
-            return View(_context.Users.ToList());
+            // Kullanıcıları listeleme
+            return View(_userManager.Users.ToList());
         }
 
-        public IActionResult UserDetail(string id)
+        public async Task<IActionResult> DeleteUser(string id)
         {
-            var user = _context.Users
-                .Include(u => u.Questions)
-                .Include(u => u.Answers)
-                .FirstOrDefault(u => u.Id == id);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (currentUserId == id)
+            {
+                TempData["ErrorMessage"] = "Kendinizi silemezsiniz!";
+                return RedirectToAction(nameof(UserManagement));
+            }
 
-            if (user == null)
-                return NotFound();
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
 
-            ViewBag.TotalQuestions = user.Questions.Count;
-            ViewBag.TotalAnswers = user.Answers.Count;
+            // Kullanıcıya ait soruları ve cevapları silmemiz lazım
+            // (Cascade Delete yoksa manuel sileriz, Repository ile)
+            var userQuestions = await _unitOfWork.Questions.GetAllAsync(q => q.ApplicationUserId == id);
+            var userAnswers = await _unitOfWork.Answers.GetAllAsync(a => a.ApplicationUserId == id);
 
-            return View(user);
-        }
+            _unitOfWork.Questions.RemoveRange(userQuestions);
+            _unitOfWork.Answers.RemoveRange(userAnswers);
+            await _unitOfWork.CompleteAsync();
 
-        public IActionResult DeleteUser(string id)
-        {
-            var user = _context.Users
-                .Include(u => u.Questions)
-                .Include(u => u.Answers)
-                .FirstOrDefault(u => u.Id == id);
-
-            if (user == null)
-                return NotFound();
-
-            var userQuestions = _context.Questions
-                .Where(q => q.ApplicationUserId == id);
-
-            var userAnswers = _context.Answers
-                .Where(a => a.ApplicationUserId == id);
-
-            _context.Questions.RemoveRange(userQuestions);
-            _context.Answers.RemoveRange(userAnswers);
-            _context.Users.Remove(user);
-
-            _context.SaveChanges();
+            // Identity üzerinden kullanıcıyı sil
+            await _userManager.DeleteAsync(user);
 
             return RedirectToAction(nameof(UserManagement));
         }
