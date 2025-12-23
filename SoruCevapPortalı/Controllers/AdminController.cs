@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity; // UserManager için
+using Microsoft.EntityFrameworkCore;   // ✅ Include ve ToListAsync için
 using SoruCevapPortalı.Interfaces;
 using SoruCevapPortalı.Models;
+using SoruCevapPortalı.Data;           // ✅ DbContext için
 using System.Security.Claims;
 
 namespace SoruCevapPortalı.Controllers
@@ -12,19 +14,18 @@ namespace SoruCevapPortalı.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationDbContext _context; // ✅ Raporlar için
 
-        public AdminController(IUnitOfWork unitOfWork, UserManager<ApplicationUser> userManager)
+        public AdminController(IUnitOfWork unitOfWork, UserManager<ApplicationUser> userManager, ApplicationDbContext context)
         {
             _unitOfWork = unitOfWork;
             _userManager = userManager;
+            _context = context;
         }
 
         // -------------------- DASHBOARD --------------------
         public async Task<IActionResult> Index()
         {
-            // Count işlemleri için GetAll yapıp Count almak performanssızdır ama
-            // generic repository'de CountAsync yoksa şimdilik idare eder.
-            // Ödev olduğu için sorun olmaz.
             var questions = await _unitOfWork.Questions.GetAllAsync();
             var categories = await _unitOfWork.Categories.GetAllAsync();
             var answers = await _unitOfWork.Answers.GetAllAsync();
@@ -32,7 +33,10 @@ namespace SoruCevapPortalı.Controllers
             ViewBag.TotalQuestions = questions.Count();
             ViewBag.TotalCategories = categories.Count();
             ViewBag.TotalAnswers = answers.Count();
-            ViewBag.TotalUsers = _userManager.Users.Count(); // UserManager'dan çekiyoruz
+            ViewBag.TotalUsers = _userManager.Users.Count();
+
+            // Bekleyen Rapor Sayısı
+            ViewBag.PendingReports = await _context.Reports.CountAsync();
 
             return View();
         }
@@ -86,10 +90,22 @@ namespace SoruCevapPortalı.Controllers
             return RedirectToAction(nameof(Categories));
         }
 
-        // -------------------- SORULAR --------------------
-        public async Task<IActionResult> Questions()
+        // -------------------- SORULAR (ARAMA EKLENDİ) --------------------
+        public async Task<IActionResult> Questions(string search)
         {
+            // Tüm soruları ilişkili verilerle çek
             var questions = await _unitOfWork.Questions.GetAllAsync(null, "Category,ApplicationUser,Answers");
+
+            // Arama filtresi uygula
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                // Not: Repository yapısında GetAllAsync IEnumerable döndüğü için filtreleme bellekte yapılır.
+                questions = questions.Where(q => q.Title.ToLower().Contains(search) ||
+                                                 q.Content.ToLower().Contains(search));
+            }
+
+            ViewBag.Search = search;
             return View(questions);
         }
 
@@ -104,30 +120,36 @@ namespace SoruCevapPortalı.Controllers
             return RedirectToAction(nameof(Questions));
         }
 
-        // -------------------- KULLANICI DETAY (EKSİK OLAN KISIM) --------------------
+        // -------------------- KULLANICI DETAY --------------------
         public async Task<IActionResult> UserDetail(string id)
         {
-            // Kullanıcıyı bul
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            // İstatistikler için UnitOfWork kullanıyoruz
             var userQuestions = await _unitOfWork.Questions.GetAllAsync(q => q.ApplicationUserId == id);
             var userAnswers = await _unitOfWork.Answers.GetAllAsync(a => a.ApplicationUserId == id);
 
-            // ViewBag ile view tarafına veri taşıyoruz
             ViewBag.TotalQuestions = userQuestions.Count();
             ViewBag.TotalAnswers = userAnswers.Count();
-            ViewBag.MemberSince = user.RegistrationDate.Year; // Kayıt yılı
+            ViewBag.MemberSince = user.RegistrationDate.Year;
 
             return View(user);
         }
 
-        // -------------------- KULLANICILAR (UserManager Kullanıyoruz) --------------------
-        public IActionResult UserManagement()
+        // -------------------- KULLANICILAR (ARAMA EKLENDİ) --------------------
+        public IActionResult UserManagement(string search)
         {
-            // Kullanıcıları listeleme
-            return View(_userManager.Users.ToList());
+            var users = _userManager.Users.AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                users = users.Where(u => u.UserName.ToLower().Contains(search) ||
+                                         u.Email.ToLower().Contains(search));
+            }
+
+            ViewBag.Search = search;
+            return View(users.ToList());
         }
 
         public async Task<IActionResult> DeleteUser(string id)
@@ -142,8 +164,7 @@ namespace SoruCevapPortalı.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            // Kullanıcıya ait soruları ve cevapları silmemiz lazım
-            // (Cascade Delete yoksa manuel sileriz, Repository ile)
+            // İlişkili verileri temizle
             var userQuestions = await _unitOfWork.Questions.GetAllAsync(q => q.ApplicationUserId == id);
             var userAnswers = await _unitOfWork.Answers.GetAllAsync(a => a.ApplicationUserId == id);
 
@@ -151,10 +172,45 @@ namespace SoruCevapPortalı.Controllers
             _unitOfWork.Answers.RemoveRange(userAnswers);
             await _unitOfWork.CompleteAsync();
 
-            // Identity üzerinden kullanıcıyı sil
             await _userManager.DeleteAsync(user);
 
             return RedirectToAction(nameof(UserManagement));
+        }
+
+        // ================= RAPORLAR SAYFASI (ARAMA EKLENDİ) =================
+        public async Task<IActionResult> Reports(string search)
+        {
+            var reportsQuery = _context.Reports
+                .Include(r => r.Reporter)
+                .Include(r => r.Question)
+                .Include(r => r.Answer)
+                .AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                reportsQuery = reportsQuery.Where(r =>
+                    r.Reason.ToLower().Contains(search) ||
+                    r.Reporter.UserName.ToLower().Contains(search));
+            }
+
+            ViewBag.Search = search;
+
+            // Tarihe göre tersten sıralayıp gönder
+            return View(await reportsQuery.OrderByDescending(r => r.CreatedDate).ToListAsync());
+        }
+
+        // Raporu Silme / Tamamlandı İşaretleme
+        [HttpPost]
+        public async Task<IActionResult> DeleteReport(int id)
+        {
+            var report = await _context.Reports.FindAsync(id);
+            if (report != null)
+            {
+                _context.Reports.Remove(report);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToAction(nameof(Reports));
         }
     }
 }

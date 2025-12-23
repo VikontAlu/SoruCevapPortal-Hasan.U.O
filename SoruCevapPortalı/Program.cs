@@ -2,8 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 using SoruCevapPortalı.Data;
 using SoruCevapPortalı.Models;
-using SoruCevapPortalı.Interfaces;  // ✅ EKLENDİ
-using SoruCevapPortalı.Repositories; // ✅ EKLENDİ
+using SoruCevapPortalı.Interfaces;
+using SoruCevapPortalı.Repositories;
+using SoruCevapPortalı.Hubs; // ✅ EKLENDİ: Hubs klasörünü kullanabilmek için
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders()
 .AddDefaultUI();
+
+// 👇 SIGNALR SERVİSİ EKLENDİ 👇
+builder.Services.AddSignalR();
 
 builder.Services.AddControllersWithViews();
 
@@ -98,6 +102,8 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// 👇 HUB ROTASI TANIMLANDI 👇
+app.MapHub<ReportHub>("/reportHub");
 
 app.MapControllerRoute(
     name: "default",

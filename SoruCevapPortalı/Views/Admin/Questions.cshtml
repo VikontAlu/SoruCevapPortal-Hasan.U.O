@@ -6,7 +6,13 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-question-circle text-primary"></i> Soru Yönetimi</h2>
-    <div>
+
+    <div class="d-flex align-items-center">
+        <form method="get" class="d-flex me-3">
+            <input type="text" name="search" value="@ViewBag.Search" class="form-control me-2" placeholder="Başlık veya içerik ara..." style="width: 250px;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+        </form>
+
         <span class="badge bg-danger me-2">@Model.Count Soru</span>
         <a href="/Admin" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-dashboard"></i> Dashboard'a Dön
@@ -17,7 +23,16 @@
 @if (!Model.Any())
 {
     <div class="alert alert-warning">
-        <i class="fas fa-exclamation-triangle"></i> Henüz hiç soru bulunmuyor!
+        <i class="fas fa-exclamation-triangle"></i>
+        @if (!string.IsNullOrEmpty(ViewBag.Search))
+        {
+            <span>"@ViewBag.Search" aramasına uygun soru bulunamadı.</span>
+            <a href="/Admin/Questions" class="alert-link">Tümünü Göster</a>
+        }
+        else
+        {
+            <span>Henüz hiç soru bulunmuyor!</span>
+        }
     </div>
 }
 else

@@ -7,7 +7,13 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-users text-primary"></i> Kullanıcı Yönetimi</h2>
-    <div>
+
+    <div class="d-flex align-items-center">
+        <form method="get" class="d-flex me-3">
+            <input type="text" name="search" value="@ViewBag.Search" class="form-control me-2" placeholder="Ad veya E-posta ara..." style="width: 250px;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+        </form>
+
         <span class="badge bg-info me-2">@Model.Count Kullanıcı</span>
         <a href="/Admin" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Dashboard
@@ -18,7 +24,16 @@
 @if (!Model.Any())
 {
     <div class="alert alert-info">
-        <i class="fas fa-info-circle"></i> Henüz kayıtlı kullanıcı bulunmuyor.
+        <i class="fas fa-info-circle"></i>
+        @if (!string.IsNullOrEmpty(ViewBag.Search))
+        {
+            <span>"@ViewBag.Search" aramasına uygun kullanıcı bulunamadı.</span>
+            <a href="/Admin/UserManagement" class="alert-link">Tüm listeyi göster</a>
+        }
+        else
+        {
+            <span>Henüz kayıtlı kullanıcı bulunmuyor.</span>
+        }
     </div>
 }
 else
