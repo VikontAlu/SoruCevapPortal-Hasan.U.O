@@ -7,13 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Views\NewFolder\**" />
     <Compile Remove="Views\Test\**" />
-    <Content Remove="Views\NewFolder\**" />
     <Content Remove="Views\Test\**" />
-    <EmbeddedResource Remove="Views\NewFolder\**" />
     <EmbeddedResource Remove="Views\Test\**" />
-    <None Remove="Views\NewFolder\**" />
     <None Remove="Views\Test\**" />
   </ItemGroup>
 

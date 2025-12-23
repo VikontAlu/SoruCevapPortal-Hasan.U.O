@@ -16,7 +16,7 @@ namespace SoruCevapPortalı.Controllers
             _context = context;
         }
 
-        
+        // -------------------- CEVAP EKLE --------------------
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -47,7 +47,7 @@ namespace SoruCevapPortalı.Controllers
             return RedirectToAction("Details", "Question", new { id = questionId });
         }
 
-       
+        // -------------------- CEVABI KABUL ET (+PUAN EKLENDİ) --------------------
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -55,6 +55,8 @@ namespace SoruCevapPortalı.Controllers
         {
             var answer = _context.Answers
                 .Include(a => a.Question)
+                .Include(a => a.ApplicationUser)          // ✅ Cevabı veren kullanıcıyı çek
+                .Include(a => a.Question.ApplicationUser) // ✅ Soruyu soran kullanıcıyı çek
                 .FirstOrDefault(a => a.Id == id);
 
             if (answer == null)
@@ -62,11 +64,11 @@ namespace SoruCevapPortalı.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            
+            // Sadece soruyu soran kişi kabul edebilir
             if (answer.Question.ApplicationUserId != userId)
                 return Json(new { success = false, message = "Bu işlem için yetkiniz yok!" });
 
-            // Aynı soruya ait tüm cevapları sıfırla
+            // Aynı soruya ait tüm cevapların kabulünü kaldır
             var answers = _context.Answers
                 .Where(a => a.QuestionId == answer.QuestionId)
                 .ToList();
@@ -84,12 +86,21 @@ namespace SoruCevapPortalı.Controllers
             // Soruyu çözüldü olarak işaretle
             answer.Question.IsSolved = true;
 
+            // ✅ PUAN DAĞITIMI
+            // 1. Cevabı yazana 15 puan ver
+            if (answer.ApplicationUser != null)
+                answer.ApplicationUser.Reputation += 15;
+
+            // 2. Soruyu sorana (kabul ettiği için) 2 puan ver
+            if (answer.Question.ApplicationUser != null)
+                answer.Question.ApplicationUser.Reputation += 2;
+
             _context.SaveChanges();
 
             return Json(new { success = true, message = "Cevap kabul edildi!" });
         }
 
-        // -------------------- OY VER (AJAX) --------------------
+        // -------------------- OY VER (+PUAN EKLENDİ) --------------------
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -99,6 +110,7 @@ namespace SoruCevapPortalı.Controllers
 
             var answer = _context.Answers
                 .Include(a => a.Votes)
+                .Include(a => a.ApplicationUser) // ✅ Kullanıcı puanı için gerekli
                 .FirstOrDefault(a => a.Id == answerId);
 
             if (answer == null)
@@ -107,18 +119,46 @@ namespace SoruCevapPortalı.Controllers
             var existingVote = _context.AnswerVotes
                 .FirstOrDefault(v => v.AnswerId == answerId && v.ApplicationUserId == userId);
 
+            int reputationChange = 0; // Puan değişimi değişkeni
+
             if (existingVote != null)
             {
-                existingVote.IsUpVote = isUpvote;
+                // Eğer kullanıcı zaten aynı yönde oy verdiyse (Örn: Like atmış, tekrar Like'a bastı)
+                // O zaman oyu geri çekiyoruz (Siliyoruz)
+                if (existingVote.IsUpVote == isUpvote)
+                {
+                    _context.AnswerVotes.Remove(existingVote);
+                    // Oyu geri çekince verilen puanı geri al
+                    reputationChange = isUpvote ? -10 : 2;
+                }
+                else
+                {
+                    // Farklı yönde bastıysa (Like -> Dislike), güncelliyoruz
+                    existingVote.IsUpVote = isUpvote;
+                    // Puan farkını yansıt (Örn: -2'den +10'a çıkış için +12 gerekir)
+                    reputationChange = isUpvote ? 12 : -12;
+                }
             }
             else
             {
+                // Hiç oyu yoksa yeni ekliyoruz
                 _context.AnswerVotes.Add(new AnswerVote
                 {
                     AnswerId = answerId,
                     ApplicationUserId = userId,
                     IsUpVote = isUpvote
                 });
+
+                // Yeni oy puanı: Like +10, Dislike -2
+                reputationChange = isUpvote ? 10 : -2;
+            }
+
+            // ✅ PUANI KULLANICIYA İŞLE
+            // Kendi cevabına oy veremezsin kontrolü burada da yapılabilir, 
+            // ama kendi kendine puan kazandırmaması için ID kontrolü yapıyoruz.
+            if (answer.ApplicationUser != null && answer.ApplicationUser.Id != userId)
+            {
+                answer.ApplicationUser.Reputation += reputationChange;
             }
 
             _context.SaveChanges();
@@ -136,7 +176,7 @@ namespace SoruCevapPortalı.Controllers
                 upvotes = up,
                 downvotes = down,
                 totalScore = up - down,
-                userVote = isUpvote ? "up" : "down"
+                userVote = existingVote != null && existingVote.IsUpVote == isUpvote ? "none" : (isUpvote ? "up" : "down")
             });
         }
     }

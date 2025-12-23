@@ -1,44 +1,52 @@
 ﻿@model List<SoruCevapPortalı.Models.Question>
 @{
-    ViewData["Title"] = ViewBag.CategoryName + " Soruları";
+    ViewData["Title"] = ViewBag.CategoryName;
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <div class="container mt-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2><i class="fas fa-folder-open text-warning"></i> @ViewBag.CategoryName Kategorisi</h2>
-        <a href="/Question/Index" class="btn btn-outline-secondary btn-sm">Tüm Sorulara Dön</a>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark">
+            <span class="text-muted fw-light">Kategori:</span> @ViewBag.CategoryName
+        </h2>
+        <a href="/Question/Index" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Tüm Sorular
+        </a>
     </div>
 
-    <div class="card p-3 bg-light mb-4 shadow-sm">
+    <div class="card p-3 border-0 shadow-sm bg-white mb-4 rounded-3">
         <form method="get" action="/Question/ByCategory/@ViewBag.CategoryId" class="row g-2 align-items-center">
 
             <div class="col-md-6">
                 <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" name="search" class="form-control" placeholder="Bu kategoride ara..." value="@ViewBag.Search">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0 ps-0" placeholder="Bu kategoride ara..." value="@ViewBag.Search">
                 </div>
             </div>
 
             <div class="col-md-4">
                 <select name="sortOrder" class="form-select" onchange="this.form.submit()">
+                    <option value="">Sıralama...</option>
                     <option value="date_desc" selected="@(ViewBag.SortOrder == "date_desc")">📅 En Yeni</option>
                     <option value="date_asc" selected="@(ViewBag.SortOrder == "date_asc")">📅 En Eski</option>
                     <option value="view_desc" selected="@(ViewBag.SortOrder == "view_desc")">👁 En Çok Görüntülenen</option>
-                    <option value="vote_desc" selected="@(ViewBag.SortOrder == "vote_desc")">⭐ En Çok Oylanan</option>
+                    <option value="view_asc" selected="@(ViewBag.SortOrder == "view_asc")">👁 En Az Görüntülenen</option>
+                    <option value="vote_desc" selected="@(ViewBag.SortOrder == "vote_desc")">⭐ En Çok Beğenilen</option>
+                    <option value="vote_asc" selected="@(ViewBag.SortOrder == "vote_asc")">⭐ En Az Beğenilen</option>
                 </select>
             </div>
 
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Ara</button>
+                <button type="submit" class="btn btn-secondary w-100">Ara</button>
             </div>
         </form>
     </div>
 
     @if (!Model.Any())
     {
-        <div class="alert alert-warning text-center">
+        <div class="alert alert-warning text-center shadow-sm">
+            <i class="fas fa-search mb-2"></i><br>
             Bu kategoride henüz soru yok veya aramanızla eşleşen sonuç bulunamadı.
         </div>
     }
@@ -46,23 +54,82 @@
     {
         @foreach (var question in Model)
         {
-            <div class="card mb-3 shadow-sm border-start border-4 border-info">
-                <div class="card-body">
-                    <h5 class="card-title">
-                        <a href="/Question/Details/@question.Id" class="text-decoration-none text-dark">
-                            @question.Title
-                        </a>
-                    </h5>
-                    <p class="card-text text-muted">
-                        @(question.Content.Length > 150 ? question.Content.Substring(0, 150) + "..." : question.Content)
-                    </p>
-                    <div class="d-flex justify-content-between text-muted small">
-                        <span><i class="fas fa-user"></i> @question.ApplicationUser?.UserName</span>
-                        <span><i class="fas fa-clock"></i> @question.CreatedDate.ToString("dd.MM.yyyy")</span>
-                        <span><i class="fas fa-eye"></i> @question.ViewCount</span>
+            <div class="card mb-3 border-0 shadow-sm question-card @(question.IsSolved ? "border-start border-success border-5" : "")">
+                <div class="card-body p-0">
+                    <div class="d-flex">
+
+                        <div class="d-flex flex-column align-items-center justify-content-center p-3 bg-light text-muted border-end" style="min-width: 100px;">
+                            <div class="mb-2 text-center">
+                                <span class="d-block fw-bold fs-5 text-dark">@question.VoteCount</span>
+                                <small style="font-size: 10px;">OY</small>
+                            </div>
+                            <div class="mb-2 text-center @(question.IsSolved ? "text-success" : "")">
+                                <span class="d-block fw-bold fs-5">@question.Answers.Count</span>
+                                <small style="font-size: 10px;">CEVAP</small>
+                            </div>
+                            <div class="text-center">
+                                <span class="d-block fw-bold fs-6">@question.ViewCount</span>
+                                <small style="font-size: 10px;">GÖZ</small>
+                            </div>
+                        </div>
+
+                        <div class="p-3 flex-grow-1">
+                            <h5 class="mb-1">
+                                <a href="/Question/Details/@question.Id" class="text-decoration-none text-primary fw-bold stretched-link">
+                                    @question.Title
+                                </a>
+                            </h5>
+
+                            <p class="text-muted mb-2 small text-truncate" style="max-width: 600px;">
+                                @question.Content
+                            </p>
+
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="badge bg-secondary bg-opacity-10 text-dark border rounded-pill">
+                                    #@ViewBag.CategoryName
+                                </span>
+
+                                <div class="d-flex align-items-center small text-muted">
+                                    <div class="me-2 text-end lh-1">
+                                        <span class="d-block">@question.ApplicationUser?.UserName</span>
+                                        <span class="text-secondary" style="font-size: 11px;">@question.CreatedDate.ToString("dd MMM yyyy")</span>
+                                    </div>
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 35px; height: 35px;">
+                                        @question.ApplicationUser?.UserName?.Substring(0, 1).ToUpper()
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
         }
     }
 </div>
+
+<style>
+    .question-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+        }
+
+    .stretched-link::after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        content: "";
+    }
+
+    .question-card .badge, .question-card .btn {
+        position: relative;
+        z-index: 2;
+    }
+</style>

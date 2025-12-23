@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using SoruCevapPortalı.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace SoruCevapPortalı.Models
@@ -20,10 +19,21 @@ namespace SoruCevapPortalı.Models
         [Display(Name = "Profil Resmi")]
         public string? ProfilePicture { get; set; }
 
-        [Display(Name = "Hakkında")]
-        public string? About { get; set; }
+        // ✅ YENİ EKLENEN ALANLAR (Puan Sistemi ve Ayarlar İçin)
 
-        // Navigation Properties
+        [Display(Name = "Puan (Reputation)")]
+        public int Reputation { get; set; } = 0;
+
+        [StringLength(100)]
+        [Display(Name = "Meslek / Unvan")]
+        public string? JobTitle { get; set; }
+
+        [Display(Name = "Hakkında")]
+        public string? AboutMe { get; set; } // Controller tarafında AboutMe kullandığımız için ismini güncelledik.
+
+        // -------------------- Navigation Properties --------------------
+        // (İlişkili tablolarla bağlantılar)
+
         public virtual ICollection<Question> Questions { get; set; } = new HashSet<Question>();
         public virtual ICollection<Answer> Answers { get; set; } = new HashSet<Answer>();
         public virtual ICollection<QuestionVote> QuestionVotes { get; set; } = new HashSet<QuestionVote>();

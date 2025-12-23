@@ -1,0 +1,168 @@
+﻿@model SoruCevapPortalı.Models.ApplicationUser
+@{
+    ViewData["Title"] = Model.UserName + " Profili";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var questions = ViewBag.UserQuestions as List<SoruCevapPortalı.Models.Question>;
+    var answers = ViewBag.UserAnswers as List<SoruCevapPortalı.Models.Answer>;
+}
+
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+        <div class="bg-primary bg-gradient" style="height: 100px;"></div>
+        <div class="card-body px-4 pb-4 position-relative">
+            <div class="d-flex align-items-end" style="margin-top: -60px;">
+                <div class="bg-white p-1 rounded-circle shadow-sm me-3">
+                    <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center fw-bold display-4" style="width: 100px; height: 100px;">
+                        @Model.UserName?.Substring(0, 1).ToUpper()
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <h2 class="fw-bold mb-0">@Model.UserName</h2>
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-alt me-1"></i> Üyelik: @Model.RegistrationDate.ToString("dd MMMM yyyy")
+                    </small>
+                </div>
+                @if (ViewBag.IsMyProfile)
+                {
+                    <div class="ms-auto mb-3">
+                        <a href="/Identity/Account/Manage" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-cog"></i> Ayarlar
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-3 mb-4">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white fw-bold">İstatistikler</div>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-star text-warning me-2"></i>Puan</span>
+                        <span class="fw-bold">@ViewBag.Reputation</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-question-circle text-primary me-2"></i>Soru</span>
+                        <span class="badge bg-primary rounded-pill">@ViewBag.QuestionCount</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-comment text-success me-2"></i>Cevap</span>
+                        <span class="badge bg-success rounded-pill">@ViewBag.AnswerCount</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-eye text-info me-2"></i>Görüntülenme</span>
+                        <span class="fw-bold">@ViewBag.TotalViews</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <ul class="nav nav-pills mb-3" id="profileTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold" id="questions-tab" data-bs-toggle="tab" data-bs-target="#questions" type="button" role="tab">
+                        <i class="fas fa-question-circle me-1"></i> Sorular (@questions.Count)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold" id="answers-tab" data-bs-toggle="tab" data-bs-target="#answers" type="button" role="tab">
+                        <i class="fas fa-comment me-1"></i> Cevaplar (@answers.Count)
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="profileTabsContent">
+
+                <div class="tab-pane fade show active" id="questions" role="tabpanel">
+                    @if (questions.Count > 0)
+                    {
+                        foreach (var q in questions)
+                        {
+                            <div class="card border-0 shadow-sm mb-2 hover-bg">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3 text-center" style="min-width: 40px;">
+                                            <span class="badge @(q.IsSolved ? "bg-success" : "bg-light text-dark border") d-block">
+                                                @q.VoteCount oy
+                                            </span>
+                                        </div>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <h6 class="mb-0 text-truncate">
+                                                <a href="/Question/Details/@q.Id" class="text-decoration-none text-dark fw-bold">@q.Title</a>
+                                            </h6>
+                                            <small class="text-muted">
+                                                @q.CreatedDate.ToString("dd MMM yyyy") • @q.Category?.Name
+                                            </small>
+                                        </div>
+                                        <div class="ms-2">
+                                            <span class="badge bg-light text-dark">@q.ViewCount göz</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-light text-center border">Henüz soru sorulmamış.</div>
+                    }
+                </div>
+
+                <div class="tab-pane fade" id="answers" role="tabpanel">
+                    @if (answers.Count > 0)
+                    {
+                        foreach (var a in answers)
+                        {
+                            <div class="card border-0 shadow-sm mb-2 hover-bg">
+                                <div class="card-body py-3">
+                                    <div class="d-flex flex-column">
+                                        <small class="text-muted mb-1">
+                                            <i class="fas fa-reply me-1"></i>
+                                            <a href="/Question/Details/@a.QuestionId" class="text-decoration-none fw-bold text-secondary">
+                                                "@a.Question?.Title" sorusuna cevap:
+                                            </a>
+                                        </small>
+                                        <p class="mb-1 text-dark text-truncate">@a.Content</p>
+                                        <div class="d-flex align-items-center small">
+                                            <span class="text-muted me-3">@a.CreatedDate.ToString("dd MMM yyyy")</span>
+                                            <span class="badge @(a.IsBestAnswer ? "bg-success" : "bg-secondary")">
+                                                @(a.IsBestAnswer ? "Kabul Edildi" : $"{a.VoteCount} Oy")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-light text-center border">Henüz cevap yazılmamış.</div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-bg {
+        transition: background-color 0.2s;
+    }
+
+        .hover-bg:hover {
+            background-color: #f8f9fa;
+        }
+
+    .nav-pills .nav-link {
+        color: #495057;
+    }
+
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+</style>

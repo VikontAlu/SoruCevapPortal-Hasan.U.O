@@ -16,27 +16,50 @@ namespace SoruCevapPortalı.Controllers
         }
 
         // ================= INDEX =================
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string search, string sortOrder)
         {
-            // İlişkili verilerle birlikte tüm soruları çekiyoruz
             var questions = await _unitOfWork.Questions.GetAllAsync(null, "Category,ApplicationUser,Answers");
+            var query = questions.AsQueryable();
 
-            // Tarihe göre sıralayıp View'a gönderiyoruz
-            return View(questions.OrderByDescending(q => q.CreatedDate).ToList());
+            // ARAMA
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                query = query.Where(q => q.Title.ToLower().Contains(search) ||
+                                         q.Content.ToLower().Contains(search));
+                ViewBag.Search = search;
+            }
+
+            // SIRALAMA
+            ViewBag.SortOrder = sortOrder;
+
+            switch (sortOrder)
+            {
+                case "date_asc": query = query.OrderBy(q => q.CreatedDate); break;
+                case "title_asc": query = query.OrderBy(q => q.Title); break;
+                case "title_desc": query = query.OrderByDescending(q => q.Title); break;
+
+                case "view_desc": query = query.OrderByDescending(q => q.ViewCount); break;
+                case "view_asc": query = query.OrderBy(q => q.ViewCount); break;
+
+                case "vote_desc": query = query.OrderByDescending(q => q.VoteCount); break;
+                case "vote_asc": query = query.OrderBy(q => q.VoteCount); break;
+
+                default: query = query.OrderByDescending(q => q.CreatedDate); break;
+            }
+
+            return View(query.ToList());
         }
 
         // ================= DETAILS =================
         public async Task<IActionResult> Details(int id)
         {
-            // Soru detaylarını, cevapları, cevaplayan kullanıcıları ve oyları getiriyoruz
             var question = await _unitOfWork.Questions.GetAsync(
                 q => q.Id == id,
                 "Category,ApplicationUser,Answers,Answers.ApplicationUser,Votes");
 
-            if (question == null)
-                return NotFound();
+            if (question == null) return NotFound();
 
-            // Görüntülenme sayısını artır
             question.ViewCount++;
             _unitOfWork.Questions.Update(question);
             await _unitOfWork.CompleteAsync();
@@ -58,8 +81,6 @@ namespace SoruCevapPortalı.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Ask(Question question)
         {
-            // Eğer Model (Models/Question.cs) içinde [ValidateNever] eklemediysen
-            // burası sürekli False döner ve kayıt yapmaz.
             if (!ModelState.IsValid)
             {
                 ViewBag.Categories = await _unitOfWork.Categories.GetAllAsync();
@@ -78,92 +99,114 @@ namespace SoruCevapPortalı.Controllers
             return RedirectToAction(nameof(Details), new { id = question.Id });
         }
 
-        // ================= AJAX GET VOTES (EKSİKTİ, EKLENDİ) =================
-        [HttpGet]
-        public async Task<JsonResult> GetVotes(int id)
-        {
-            // Oyları çek
-            var votes = await _unitOfWork.QuestionVotes.GetAllAsync(v => v.QuestionId == id);
-
-            var up = votes.Count(v => v.IsUpVote);
-            var down = votes.Count(v => !v.IsUpVote);
-
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            string userVote = "none";
-
-            if (userId != null)
-            {
-                var vote = votes.FirstOrDefault(v => v.ApplicationUserId == userId);
-                if (vote != null)
-                    userVote = vote.IsUpVote ? "up" : "down";
-            }
-
-            return Json(new
-            {
-                success = true,
-                upvotes = up,
-                downvotes = down,
-                totalScore = up - down,
-                userVote
-            });
-        }
-
-        // ================= AJAX VOTE (OY VERME) =================
+        // ================= AJAX VOTE (PUAN SİSTEMİ EKLENDİ) =================
         [HttpPost]
         [Authorize]
         public async Task<JsonResult> Vote(int questionId, bool isUpVote)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null)
-                return Json(new { success = false, message = "Giriş yapmalısınız." });
+            if (userId == null) return Json(new { success = false, message = "Giriş yapmalısınız." });
 
-            var question = await _unitOfWork.Questions.GetAsync(q => q.Id == questionId);
-            if (question == null)
-                return Json(new { success = false, message = "Soru bulunamadı." });
+            // Puan verebilmek için sorunun sahibini (ApplicationUser) dahil ederek çekiyoruz.
+            var question = await _unitOfWork.Questions.GetAsync(q => q.Id == questionId, "ApplicationUser");
+
+            if (question == null) return Json(new { success = false, message = "Soru bulunamadı." });
 
             var existingVote = await _unitOfWork.QuestionVotes.GetAsync(v => v.QuestionId == questionId && v.ApplicationUserId == userId);
+
+            int reputationChange = 0; // Puan değişimi
 
             if (existingVote != null)
             {
                 if (existingVote.IsUpVote == isUpVote)
-                    _unitOfWork.QuestionVotes.Remove(existingVote); // Aynı oya tekrar basarsa oyu geri al
+                {
+                    // Oyu geri çekme
+                    _unitOfWork.QuestionVotes.Remove(existingVote);
+                    // Puanı geri al (Like ise -5, Dislike ise +2)
+                    reputationChange = isUpVote ? -5 : 2;
+                }
                 else
                 {
-                    existingVote.IsUpVote = isUpVote; // Oyu değiştir (Up -> Down veya tam tersi)
+                    // Oyu değiştirme (Like -> Dislike veya tam tersi)
+                    existingVote.IsUpVote = isUpVote;
                     _unitOfWork.QuestionVotes.Update(existingVote);
+                    // Puan farkı (Like olduysa +7, Dislike olduysa -7)
+                    reputationChange = isUpVote ? 7 : -7;
                 }
             }
             else
             {
+                // Yeni oy
                 await _unitOfWork.QuestionVotes.AddAsync(new QuestionVote
                 {
                     QuestionId = questionId,
                     ApplicationUserId = userId,
                     IsUpVote = isUpVote
                 });
+
+                // Yeni puan (Like +5, Dislike -2)
+                reputationChange = isUpVote ? 5 : -2;
+            }
+
+            // ✅ PUANI KULLANICIYA İŞLE
+            // Kendi sorusuna oy veremez mantığı olsa da, backend tarafında puan kazanmasını engelliyoruz.
+            if (question.ApplicationUser != null && question.ApplicationUser.Id != userId)
+            {
+                question.ApplicationUser.Reputation += reputationChange;
             }
 
             await _unitOfWork.CompleteAsync();
 
-            // Güncel sayıları hesapla ve geri dön
+            // Güncel oyları say
             var allVotes = await _unitOfWork.QuestionVotes.GetAllAsync(v => v.QuestionId == questionId);
-            var up = allVotes.Count(v => v.IsUpVote);
-            var down = allVotes.Count(v => !v.IsUpVote);
+            var score = allVotes.Count(v => v.IsUpVote) - allVotes.Count(v => !v.IsUpVote);
 
-            return Json(new { success = true, totalScore = up - down });
+            // Sorunun toplam oy sayısını güncelle
+            question.VoteCount = score;
+            _unitOfWork.Questions.Update(question);
+            await _unitOfWork.CompleteAsync();
+
+            return Json(new { success = true, totalScore = score });
         }
 
-        // ================= BY CATEGORY (EKSİKTİ, EKLENDİ) =================
-        public async Task<IActionResult> ByCategory(int id)
+        // ================= BY CATEGORY =================
+        public async Task<IActionResult> ByCategory(int id, string search, string sortOrder)
         {
-            // Kategoriyi ve içindeki soruları çekiyoruz
-            var category = await _unitOfWork.Categories.GetAsync(c => c.Id == id, "Questions,Questions.ApplicationUser");
+            var category = await _unitOfWork.Categories.GetAsync(c => c.Id == id, "Questions,Questions.ApplicationUser,Questions.Answers");
 
-            if (category == null)
-                return NotFound();
+            if (category == null) return NotFound();
+
+            var query = category.Questions.AsQueryable();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                search = search.ToLower();
+                query = query.Where(q => q.Title.ToLower().Contains(search) ||
+                                         q.Content.ToLower().Contains(search));
+                ViewBag.Search = search;
+            }
+
+            ViewBag.SortOrder = sortOrder;
+
+            switch (sortOrder)
+            {
+                case "date_asc": query = query.OrderBy(q => q.CreatedDate); break;
+                case "title_asc": query = query.OrderBy(q => q.Title); break;
+                case "title_desc": query = query.OrderByDescending(q => q.Title); break;
+
+                case "view_desc": query = query.OrderByDescending(q => q.ViewCount); break;
+                case "view_asc": query = query.OrderBy(q => q.ViewCount); break;
+
+                case "vote_desc": query = query.OrderByDescending(q => q.VoteCount); break;
+                case "vote_asc": query = query.OrderBy(q => q.VoteCount); break;
+
+                default: query = query.OrderByDescending(q => q.CreatedDate); break;
+            }
 
             ViewBag.CategoryName = category.Name;
-            return View(category.Questions.ToList());
+            ViewBag.CategoryId = id;
+
+            return View(query.ToList());
         }
     }
 }

@@ -23,7 +23,13 @@ namespace SoruCevapPortalı.Controllers
         {
             try
             {
-                // 1. Son 10 soruyu getir (KALDI)
+                // ✅ 1. İSTATİSTİKLERİ GERİ GETİRDİK (Kutular için gerekli)
+                ViewBag.TotalQuestions = _context.Questions.Count();
+                ViewBag.TotalAnswers = _context.Answers.Count();
+                ViewBag.TotalUsers = _context.Users.Count();
+                ViewBag.TotalCategories = _context.Categories.Count();
+
+                // 2. Son 10 soruyu getir
                 var recentQuestions = _context.Questions
                     .Include(q => q.ApplicationUser)
                     .Include(q => q.Category)
@@ -32,14 +38,14 @@ namespace SoruCevapPortalı.Controllers
                     .Take(10)
                     .ToList();
 
-                // 2. Kategorileri getir (KALDI)
+                // 3. Kategorileri getir
                 var categories = _context.Categories
                     .Include(c => c.Questions)
                     .OrderBy(c => c.Name)
                     .Take(8)
                     .ToList();
 
-                // 3. Popüler soruları getir (KALDI)
+                // 4. Popüler soruları getir
                 var popularQuestions = _context.Questions
                     .Include(q => q.ApplicationUser)
                     .Include(q => q.Category)
@@ -48,8 +54,6 @@ namespace SoruCevapPortalı.Controllers
                     .ThenByDescending(q => q.ViewCount)
                     .Take(5)
                     .ToList();
-
-                // ❌ İSTATİSTİKLER SİLİNDİ (TotalQuestions, TotalAnswers vb.)
 
                 // Verileri View'a gönder
                 ViewBag.RecentQuestions = recentQuestions;
@@ -77,7 +81,7 @@ namespace SoruCevapPortalı.Controllers
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        // Admin Düzeltme Metodu (Durabilir, zararı yok)
+        // Admin Düzeltme Metodu
         public async Task<IActionResult> FixAdmin([FromServices] UserManager<ApplicationUser> userManager, [FromServices] RoleManager<IdentityRole> roleManager)
         {
             var adminEmail = "admin@admin.com";

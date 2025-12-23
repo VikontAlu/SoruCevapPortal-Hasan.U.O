@@ -6,138 +6,177 @@
 
 <div class="container mt-4">
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">@Model.Title</h4>
-            <span class="badge bg-light text-dark">
-                <i class="fas fa-eye"></i> @Model.ViewCount
-            </span>
+    <div class="border-bottom pb-3 mb-4">
+        <div class="d-flex justify-content-between align-items-start">
+            <h1 class="h2 fw-bold text-break text-dark">@Model.Title</h1>
+            <a href="/Question/Ask" class="btn btn-primary btn-sm ms-3 text-nowrap">Soru Sor</a>
         </div>
-
-        <div class="card-body">
-            <div class="d-flex align-items-center gap-3 mb-3">
-                <button class="btn btn-outline-success btn-sm" onclick="voteQuestion(@Model.Id, true)">
-                    <i class="fas fa-chevron-up"></i>
-                </button>
-
-                <span id="question-score" class="fs-4 fw-bold">@Model.VoteCount</span>
-
-                <button class="btn btn-outline-danger btn-sm" onclick="voteQuestion(@Model.Id, false)">
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-            </div>
-
-            <div class="text-muted mb-2 small">
-                <i class="fas fa-user"></i> <strong>@Model.ApplicationUser?.UserName</strong> |
-                <i class="fas fa-clock"></i> @Model.CreatedDate.ToString("dd.MM.yyyy HH:mm")
-            </div>
-
-            <span class="badge bg-info mb-3">
-                <i class="fas fa-folder"></i> @Model.Category?.Name
-            </span>
-
-            <div class="mt-3 bg-light p-3 rounded border">
-                @Html.Raw(Model.Content.Replace("\n", "<br>"))
-            </div>
-
-            @if (Model.IsSolved)
-            {
-                <div class="alert alert-success mt-3 p-2">
-                    <i class="fas fa-check-circle"></i> Bu soru çözüldü.
-                </div>
-            }
+        <div class="text-muted small mt-2 d-flex gap-3">
+            <span><span class="text-dark">Soruldu:</span> @Model.CreatedDate.ToString("dd MMM yyyy HH:mm")</span>
+            <span><span class="text-dark">Görüntülenme:</span> @Model.ViewCount kez</span>
+            <span><span class="text-dark">Kategori:</span> <span class="badge bg-light text-dark border">@Model.Category?.Name</span></span>
         </div>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">
-            <i class="fas fa-comments"></i> Cevaplar (@Model.Answers.Count)
-        </div>
+    <div class="row">
+        <div class="col-lg-9">
 
-        <div class="card-body">
+            <div class="d-flex gap-3 mb-5">
+                <div class="d-flex flex-column align-items-center" style="min-width: 50px;">
+                    <button class="btn btn-link text-secondary p-0 text-decoration-none" onclick="voteQuestion(@Model.Id, true)" style="font-size: 1.5rem;">
+                        <i class="fas fa-caret-up"></i>
+                    </button>
+                    <span id="question-score" class="fw-bold fs-4 text-dark my-1">@Model.VoteCount</span>
+                    <button class="btn btn-link text-secondary p-0 text-decoration-none" onclick="voteQuestion(@Model.Id, false)" style="font-size: 1.5rem;">
+                        <i class="fas fa-caret-down"></i>
+                    </button>
+
+                    @if (Model.IsSolved)
+                    {
+                        <div class="mt-3 text-success" title="Çözüldü">
+                            <i class="fas fa-check fa-lg"></i>
+                        </div>
+                    }
+                </div>
+
+                <div class="flex-grow-1">
+                    <div class="bg-light p-4 rounded-3 border">
+                        <p class="mb-0" style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.6;">@Model.Content</p>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-3">
+                        <div class="bg-primary bg-opacity-10 p-2 rounded border border-primary border-opacity-10 d-flex align-items-center" style="min-width: 200px;">
+                            <div class="bg-primary text-white rounded me-2 d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                                @Model.ApplicationUser?.UserName?.Substring(0, 1).ToUpper()
+                            </div>
+                            <div class="small lh-1">
+                                <span class="d-block text-muted" style="font-size: 11px;">soran</span>
+
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-bold text-primary">@Model.ApplicationUser?.UserName</span>
+                                    <span class="badge bg-warning text-dark ms-2 border border-warning" title="Kullanıcı Puanı">
+                                        <i class="fas fa-star fa-xs"></i> @(Model.ApplicationUser?.Reputation ?? 0)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center mb-3">
+                <h4 class="fw-bold me-2">@Model.Answers.Count Cevap</h4>
+                <div class="flex-grow-1 border-top"></div>
+            </div>
+
             @if (Model.Answers.Any())
             {
                 foreach (var answer in Model.Answers.OrderByDescending(a => a.IsBestAnswer).ThenByDescending(a => a.VoteCount))
                 {
-                    <div class="d-flex border-bottom pb-3 mb-3">
-                        <div class="d-flex flex-column align-items-center me-3">
-                            <button class="btn btn-outline-success btn-sm mb-1" onclick="voteAnswer(@answer.Id, true)">
-                                <i class="fas fa-chevron-up"></i>
+                    <div class="d-flex gap-3 mb-4 p-3 rounded @(answer.IsBestAnswer ? "border border-success border-2 bg-success bg-opacity-10" : "border-bottom")">
+                        <div class="d-flex flex-column align-items-center" style="min-width: 50px;">
+                            <button class="btn btn-link text-secondary p-0 text-decoration-none" onclick="voteAnswer(@answer.Id, true)" style="font-size: 1.5rem;">
+                                <i class="fas fa-caret-up"></i>
                             </button>
-
-                            <span id="answer-score-@answer.Id" class="fw-bold fs-5">@answer.VoteCount</span>
-
-                            <button class="btn btn-outline-danger btn-sm mt-1" onclick="voteAnswer(@answer.Id, false)">
-                                <i class="fas fa-chevron-down"></i>
+                            <span id="answer-score-@answer.Id" class="fw-bold fs-5 text-dark my-1">@answer.VoteCount</span>
+                            <button class="btn btn-link text-secondary p-0 text-decoration-none" onclick="voteAnswer(@answer.Id, false)" style="font-size: 1.5rem;">
+                                <i class="fas fa-caret-down"></i>
                             </button>
 
                             @if (answer.IsBestAnswer)
                             {
-                                <div class="mt-2 text-success" title="En İyi Cevap">
-                                    <i class="fas fa-check-circle fa-2x"></i>
+                                <div class="mt-2 text-success" title="Kabul Edilen Cevap">
+                                    <i class="fas fa-check fa-2x"></i>
                                 </div>
+                            }
+                            @if (User.Identity.IsAuthenticated && (Model.ApplicationUserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value || User.IsInRole("Admin")) && !answer.IsBestAnswer)
+                            {
+                                <button onclick="acceptAnswer(@answer.Id)" class="btn btn-outline-success btn-sm border-0 mt-2" title="Bu cevabı kabul et">
+                                    <i class="fas fa-check"></i>
+                                </button>
                             }
                         </div>
 
                         <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between">
-                                <div>
-                                    <strong>@answer.ApplicationUser?.UserName</strong>
-                                    <small class="text-muted ms-2">@answer.CreatedDate.ToString("dd.MM.yyyy HH:mm")</small>
-                                </div>
+                            <div class="mb-3" style="font-size: 1rem;">
+                                @Html.Raw(answer.Content.Replace("\n", "<br>"))
                             </div>
 
-                            <p class="mt-2 mb-0">
-                                @Html.Raw(answer.Content.Replace("\n", "<br>"))
-                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Cevaplandı: @answer.CreatedDate.ToString("dd.MM.yyyy HH:mm")</small>
+                                <div class="d-flex align-items-center">
+                                    <span class="text-muted small me-2">cevaplayan:</span>
+
+                                    <span class="fw-bold text-dark">@answer.ApplicationUser?.UserName</span>
+                                    <span class="badge bg-light text-muted border ms-1" style="font-size: 0.75rem;" title="Kullanıcı Puanı">
+                                        <i class="fas fa-star text-warning" style="font-size: 0.7rem;"></i> @(answer.ApplicationUser?.Reputation ?? 0)
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 }
             }
             else
             {
-                <div class="alert alert-warning">
-                    Henüz cevap yok. İlk cevabı sen yaz!
+                <div class="text-center py-5 bg-light rounded mb-4">
+                    <i class="fas fa-wind fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">Henüz cevap yok. İlk cevabı sen yaz!</p>
                 </div>
             }
+
+            @if (User.Identity.IsAuthenticated)
+            {
+                <div class="card shadow-sm border-0 mt-5 bg-light">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3">Cevabınız</h5>
+                        <form method="post" action="/Answer/Add">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="questionId" value="@Model.Id" />
+                            <textarea name="content" class="form-control mb-3" rows="6" placeholder="Detaylı bir cevap yazın..." required></textarea>
+                            <button type="submit" class="btn btn-primary px-4">Cevabı Gönder</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning mt-5">
+                    Cevap yazmak için <a href="/Identity/Account/Login" class="alert-link">giriş yapmalısınız</a>.
+                </div>
+            }
+
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <h6 class="fw-bold text-muted text-uppercase small border-bottom pb-2">İstatistikler</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Soruldu</span>
+                        <span class="fw-bold">@((DateTime.Now - Model.CreatedDate).Days) gün önce</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Görüntülenme</span>
+                        <span class="fw-bold">@Model.ViewCount</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Durum</span>
+                        <span class="badge @(Model.IsSolved ? "bg-success" : "bg-warning text-dark")">
+                            @(Model.IsSolved ? "Çözüldü" : "Açık")
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-
-    @if (User.Identity.IsAuthenticated)
-    {
-        <div class="card shadow-sm mt-4 mb-5">
-            <div class="card-header bg-secondary text-white">
-                <i class="fas fa-pen"></i> Cevap Yaz
-            </div>
-            <div class="card-body">
-                <form method="post" action="/Answer/Add">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" name="questionId" value="@Model.Id" />
-                    <textarea name="content" class="form-control" rows="5" placeholder="Cevabınızı buraya yazın..." required></textarea>
-                    <button type="submit" class="btn btn-primary mt-2">
-                        <i class="fas fa-paper-plane"></i> Gönder
-                    </button>
-                </form>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="alert alert-info mt-3 mb-5">
-            Cevap yazabilmek için <a href="/Identity/Account/Login" class="alert-link">giriş yapmalısınız</a>.
-        </div>
-    }
 </div>
 
 @section Scripts {
     @Html.AntiForgeryToken()
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-
     <script>
-        // Token'ı al (Güvenlik için)
         const getToken = () => document.querySelector('input[name="__RequestVerificationToken"]').value;
 
-        // 1. Soruya Oy Ver
         function voteQuestion(questionId, isUpVote) {
             const formData = new URLSearchParams();
             formData.append('questionId', questionId);
@@ -145,24 +184,15 @@
 
             fetch('/Question/Vote', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': getToken()
-                },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getToken() },
                 body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
+            }).then(res => res.json()).then(data => {
                 if (data.success) {
                     document.getElementById('question-score').innerText = data.totalScore;
-                } else {
-                    alert(data.message || "Hata oluştu");
-                }
-            })
-            .catch(err => console.error(err));
+                } else { alert(data.message); }
+            });
         }
 
-        // 2. Cevaba Oy Ver (YENİ EKLENDİ)
         function voteAnswer(answerId, isUpVote) {
             const formData = new URLSearchParams();
             formData.append('answerId', answerId);
@@ -170,23 +200,31 @@
 
             fetch('/Answer/Vote', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': getToken()
-                },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getToken() },
                 body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
+            }).then(res => res.json()).then(data => {
                 if (data.success) {
-                    // İlgili cevabın puanını güncelle
-                    const scoreEl = document.getElementById('answer-score-' + answerId);
-                    if(scoreEl) scoreEl.innerText = data.totalScore;
-                } else {
-                    alert(data.message || "Hata oluştu");
-                }
-            })
-            .catch(err => console.error(err));
+                    document.getElementById('answer-score-' + answerId).innerText = data.totalScore;
+                } else { alert(data.message); }
+            });
+        }
+
+        // CEVAP KABUL ETME FONKSİYONU
+        function acceptAnswer(answerId) {
+            if(!confirm("Bu cevabı 'En İyi Cevap' olarak işaretlemek istiyor musunuz?")) return;
+
+            const formData = new URLSearchParams();
+            formData.append('id', answerId);
+
+            fetch('/Answer/AcceptAnswer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getToken() },
+                body: formData
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    location.reload(); // Sayfayı yenile ki yeşil tik görünsün
+                } else { alert(data.message); }
+            });
         }
     </script>
 }
