@@ -18,12 +18,12 @@ namespace SoruCevapPortalı.Controllers
             _context = context;
         }
 
-        // Ana sayfa - TÜM VERİLERLE BİRLİKTE
+        // Ana sayfa
         public IActionResult Index()
         {
             try
             {
-                // Son 10 soruyu getir (en yeni sorular)
+                // 1. Son 10 soruyu getir (KALDI)
                 var recentQuestions = _context.Questions
                     .Include(q => q.ApplicationUser)
                     .Include(q => q.Category)
@@ -32,14 +32,14 @@ namespace SoruCevapPortalı.Controllers
                     .Take(10)
                     .ToList();
 
-                // Tüm kategorileri getir (soru sayılarıyla birlikte)
+                // 2. Kategorileri getir (KALDI)
                 var categories = _context.Categories
                     .Include(c => c.Questions)
                     .OrderBy(c => c.Name)
-                    .Take(8)  // En fazla 8 kategori göster
+                    .Take(8)
                     .ToList();
 
-                // Popüler sorular (en çok cevap alanlar)
+                // 3. Popüler soruları getir (KALDI)
                 var popularQuestions = _context.Questions
                     .Include(q => q.ApplicationUser)
                     .Include(q => q.Category)
@@ -49,130 +49,43 @@ namespace SoruCevapPortalı.Controllers
                     .Take(5)
                     .ToList();
 
-                // İstatistikleri hesapla
-                var totalQuestions = _context.Questions.Count();
-                var totalAnswers = _context.Answers.Count();
-                var totalUsers = _context.Users.Count();
-                var totalCategories = _context.Categories.Count();
+                // ❌ İSTATİSTİKLER SİLİNDİ (TotalQuestions, TotalAnswers vb.)
 
-                // Çözülmüş soru sayısı
-                var solvedQuestions = _context.Questions.Count(q => q.IsSolved);
-                var unsolvedQuestions = totalQuestions - solvedQuestions;
-
-                // ViewBag ile tüm verileri gönder
+                // Verileri View'a gönder
                 ViewBag.RecentQuestions = recentQuestions;
                 ViewBag.Categories = categories;
                 ViewBag.PopularQuestions = popularQuestions;
-
-                ViewBag.TotalQuestions = totalQuestions;
-                ViewBag.TotalAnswers = totalAnswers;
-                ViewBag.TotalUsers = totalUsers;
-                ViewBag.TotalCategories = totalCategories;
-                ViewBag.SolvedQuestions = solvedQuestions;
-                ViewBag.UnsolvedQuestions = unsolvedQuestions;
-
-                ViewBag.Message = $"Toplam {totalQuestions} soru, {totalAnswers} cevap";
 
                 return View();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Ana sayfa yüklenirken hata");
-
-                // Hata durumunda boş veriler gönder
-                ViewBag.RecentQuestions = new List<Question>();
-                ViewBag.Categories = new List<Category>();
-                ViewBag.PopularQuestions = new List<Question>();
-
-                ViewBag.TotalQuestions = 0;
-                ViewBag.TotalAnswers = 0;
-                ViewBag.TotalUsers = 0;
-                ViewBag.TotalCategories = 0;
-                ViewBag.SolvedQuestions = 0;
-                ViewBag.UnsolvedQuestions = 0;
-
-                ViewBag.Error = "Sistem yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
-
                 return View();
             }
         }
 
-        // Hakkında sayfası
-        public IActionResult About()
-        {
-            return View();
-        }
+        public IActionResult About() => View();
+        public IActionResult Privacy() => View();
+        public IActionResult Contact() => View();
+        public IActionResult Help() => View();
+        public IActionResult Sitemap() => View();
 
-        // Gizlilik politikası
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        // İletişim sayfası
-        public IActionResult Contact()
-        {
-            return View();
-        }
-
-        // Yardım sayfası
-        public IActionResult Help()
-        {
-            return View();
-        }
-
-        // Site haritası
-        public IActionResult Sitemap()
-        {
-            return View();
-        }
-
-        // Hata sayfası
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        // AJAX: Canlı istatistikler (isteğe bağlı)
-        [HttpGet]
-        public JsonResult GetLiveStats()
-        {
-            try
-            {
-                var stats = new
-                {
-                    TotalQuestions = _context.Questions.Count(),
-                    TotalAnswers = _context.Answers.Count(),
-                    TotalUsers = _context.Users.Count(),
-                    OnlineUsers = 1, // Basit versiyon
-                    LatestQuestion = _context.Questions
-                        .OrderByDescending(q => q.CreatedDate)
-                        .Select(q => new {
-                            Id = q.Id,
-                            Title = q.Title,
-                            Time = q.CreatedDate.ToString("HH:mm")
-                        })
-                        .FirstOrDefault()
-                };
-
-                return Json(new { success = true, data = stats });
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
-        }
+        // Admin Düzeltme Metodu (Durabilir, zararı yok)
         public async Task<IActionResult> FixAdmin([FromServices] UserManager<ApplicationUser> userManager, [FromServices] RoleManager<IdentityRole> roleManager)
         {
             var adminEmail = "admin@admin.com";
-            // Standartlara uygun GÜÇLÜ bir şifre verelim ki politika hatası ihtimali %0 olsun.
             var password = "Admin123!";
             var logs = new List<string>();
 
             try
             {
-                // 1. Önce eski admin varsa SİLELİM (Temiz kurulum için)
                 var oldUser = await userManager.FindByEmailAsync(adminEmail);
                 if (oldUser != null)
                 {
@@ -180,22 +93,20 @@ namespace SoruCevapPortalı.Controllers
                     logs.Add("🗑️ Eski hatalı admin kullanıcısı silindi.");
                 }
 
-                // 2. Rolleri Kontrol Et
                 if (!await roleManager.RoleExistsAsync("Admin"))
                 {
                     await roleManager.CreateAsync(new IdentityRole("Admin"));
-                    logs.Add("✅ Admin rolü yoktu, oluşturuldu.");
+                    logs.Add("✅ Admin rolü oluşturuldu.");
                 }
 
                 if (!await roleManager.RoleExistsAsync("User"))
                     await roleManager.CreateAsync(new IdentityRole("User"));
 
-                // 3. Kullanıcıyı SIFIRDAN Oluştur
                 var newAdmin = new ApplicationUser
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
-                    EmailConfirmed = true, // Mail onayı istemesin
+                    EmailConfirmed = true,
                     FirstName = "Sistem",
                     LastName = "Yöneticisi",
                     RegistrationDate = DateTime.Now
@@ -206,18 +117,11 @@ namespace SoruCevapPortalı.Controllers
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(newAdmin, "Admin");
-                    logs.Add($"🎉 YENİ Admin başarıyla oluşturuldu.");
-                    logs.Add($"📧 Email: {adminEmail}");
-                    logs.Add($"🔑 Şifre: {password}"); // Şifreyi Admin123! yaptık
-                    logs.Add("👉 Lütfen bu bilgilerle giriş yapın.");
+                    logs.Add($"🎉 YENİ Admin oluşturuldu. (Email: {adminEmail} - Şifre: {password})");
                 }
                 else
                 {
-                    logs.Add("❌ KULLANICI OLUŞTURULAMADI!");
-                    foreach (var error in result.Errors)
-                    {
-                        logs.Add($"⛔ Hata: {error.Code} - {error.Description}");
-                    }
+                    logs.Add("❌ Hata: " + string.Join(", ", result.Errors.Select(e => e.Description)));
                 }
             }
             catch (Exception ex)

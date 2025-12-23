@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation; // ✅ BU EKLENDİ (ValidateNever için şart)
 
 namespace SoruCevapPortalı.Models
 {
@@ -32,8 +33,7 @@ namespace SoruCevapPortalı.Models
         [Display(Name = "Çözüldü mü?")]
         public bool IsSolved { get; set; } = false;
 
-        // ❗ Kullanıcı ID'si formdan GELMEZ, backend doldurur.
-        // Bu yüzden [Required] KOYMUYORUZ.
+        // ❗ Kullanıcı ID'si formdan gelmez, Controller doldurur.
         public string ApplicationUserId { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Kategori seçilmelidir!")]
@@ -41,17 +41,23 @@ namespace SoruCevapPortalı.Models
         public int CategoryId { get; set; }
 
         // ------------- NAVIGATION -------------
+        // Bu özellikler formdan gelmediği için doğrulama hatası veriyordu.
+        // [ValidateNever] ekleyerek "bunları kontrol etme" diyoruz.
 
+        [ValidateNever] // ✅ EKLENDİ
         [ForeignKey(nameof(ApplicationUserId))]
         public virtual ApplicationUser ApplicationUser { get; set; } = null!;
 
+        [ValidateNever] // ✅ EKLENDİ
         [ForeignKey(nameof(CategoryId))]
         public virtual Category Category { get; set; } = null!;
 
         // Soruya ait cevaplar
+        [ValidateNever] // ✅ EKLENDİ
         public virtual ICollection<Answer> Answers { get; set; } = new List<Answer>();
 
         // Soruya ait oylar
+        [ValidateNever] // ✅ EKLENDİ
         public virtual ICollection<QuestionVote> Votes { get; set; } = new List<QuestionVote>();
     }
 }

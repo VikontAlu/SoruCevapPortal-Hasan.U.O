@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using SoruCevapPortalı.Models;
-using SoruCevapPortalı.Interfaces; // UnitOfWork için
+using SoruCevapPortalı.Interfaces;
 using System.Security.Claims;
 
 namespace SoruCevapPortalı.Controllers
@@ -15,19 +15,20 @@ namespace SoruCevapPortalı.Controllers
             _unitOfWork = unitOfWork;
         }
 
+        // ================= INDEX =================
         public async Task<IActionResult> Index()
         {
-            // Repository deseni ile verileri çekiyoruz
+            // İlişkili verilerle birlikte tüm soruları çekiyoruz
             var questions = await _unitOfWork.Questions.GetAllAsync(null, "Category,ApplicationUser,Answers");
 
-            // ❗ DÜZELTME BURADA: .ToList() eklendi
+            // Tarihe göre sıralayıp View'a gönderiyoruz
             return View(questions.OrderByDescending(q => q.CreatedDate).ToList());
         }
 
         // ================= DETAILS =================
         public async Task<IActionResult> Details(int id)
         {
-            // ThenInclude (Answers.ApplicationUser) string olarak şöyle yazılır: "Answers.ApplicationUser"
+            // Soru detaylarını, cevapları, cevaplayan kullanıcıları ve oyları getiriyoruz
             var question = await _unitOfWork.Questions.GetAsync(
                 q => q.Id == id,
                 "Category,ApplicationUser,Answers,Answers.ApplicationUser,Votes");
@@ -35,9 +36,10 @@ namespace SoruCevapPortalı.Controllers
             if (question == null)
                 return NotFound();
 
+            // Görüntülenme sayısını artır
             question.ViewCount++;
-            _unitOfWork.Questions.Update(question); // Update metodu void olduğu için await yok
-            await _unitOfWork.CompleteAsync(); // Kaydet
+            _unitOfWork.Questions.Update(question);
+            await _unitOfWork.CompleteAsync();
 
             return View(question);
         }
@@ -56,6 +58,8 @@ namespace SoruCevapPortalı.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Ask(Question question)
         {
+            // Eğer Model (Models/Question.cs) içinde [ValidateNever] eklemediysen
+            // burası sürekli False döner ve kayıt yapmaz.
             if (!ModelState.IsValid)
             {
                 ViewBag.Categories = await _unitOfWork.Categories.GetAllAsync();
@@ -74,7 +78,37 @@ namespace SoruCevapPortalı.Controllers
             return RedirectToAction(nameof(Details), new { id = question.Id });
         }
 
-        // ================= AJAX VOTE =================
+        // ================= AJAX GET VOTES (EKSİKTİ, EKLENDİ) =================
+        [HttpGet]
+        public async Task<JsonResult> GetVotes(int id)
+        {
+            // Oyları çek
+            var votes = await _unitOfWork.QuestionVotes.GetAllAsync(v => v.QuestionId == id);
+
+            var up = votes.Count(v => v.IsUpVote);
+            var down = votes.Count(v => !v.IsUpVote);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            string userVote = "none";
+
+            if (userId != null)
+            {
+                var vote = votes.FirstOrDefault(v => v.ApplicationUserId == userId);
+                if (vote != null)
+                    userVote = vote.IsUpVote ? "up" : "down";
+            }
+
+            return Json(new
+            {
+                success = true,
+                upvotes = up,
+                downvotes = down,
+                totalScore = up - down,
+                userVote
+            });
+        }
+
+        // ================= AJAX VOTE (OY VERME) =================
         [HttpPost]
         [Authorize]
         public async Task<JsonResult> Vote(int questionId, bool isUpVote)
@@ -92,10 +126,10 @@ namespace SoruCevapPortalı.Controllers
             if (existingVote != null)
             {
                 if (existingVote.IsUpVote == isUpVote)
-                    _unitOfWork.QuestionVotes.Remove(existingVote);
+                    _unitOfWork.QuestionVotes.Remove(existingVote); // Aynı oya tekrar basarsa oyu geri al
                 else
                 {
-                    existingVote.IsUpVote = isUpVote;
+                    existingVote.IsUpVote = isUpVote; // Oyu değiştir (Up -> Down veya tam tersi)
                     _unitOfWork.QuestionVotes.Update(existingVote);
                 }
             }
@@ -111,12 +145,25 @@ namespace SoruCevapPortalı.Controllers
 
             await _unitOfWork.CompleteAsync();
 
-            // Güncel sayıları hesapla
+            // Güncel sayıları hesapla ve geri dön
             var allVotes = await _unitOfWork.QuestionVotes.GetAllAsync(v => v.QuestionId == questionId);
             var up = allVotes.Count(v => v.IsUpVote);
             var down = allVotes.Count(v => !v.IsUpVote);
 
             return Json(new { success = true, totalScore = up - down });
+        }
+
+        // ================= BY CATEGORY (EKSİKTİ, EKLENDİ) =================
+        public async Task<IActionResult> ByCategory(int id)
+        {
+            // Kategoriyi ve içindeki soruları çekiyoruz
+            var category = await _unitOfWork.Categories.GetAsync(c => c.Id == id, "Questions,Questions.ApplicationUser");
+
+            if (category == null)
+                return NotFound();
+
+            ViewBag.CategoryName = category.Name;
+            return View(category.Questions.ToList());
         }
     }
 }

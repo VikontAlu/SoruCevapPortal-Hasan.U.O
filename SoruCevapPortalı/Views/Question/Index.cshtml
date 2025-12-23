@@ -1,9 +1,64 @@
-﻿@model List<Question>
+﻿@model List<SoruCevapPortalı.Models.Question>
 @{
-    ViewData["Title"] = "Tüm Sorular";
+    ViewData["Title"] = "Sorular";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1><i class="fas fa-list"></i> Sorular</h1>
+        <a href="/Question/Ask" class="btn btn-success"><i class="fas fa-plus"></i> Soru Sor</a>
+    </div>
+
+    <div class="card p-3 bg-light mb-4 shadow-sm">
+        <form method="get" action="/Question/Index" class="row g-2 align-items-center">
+
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Soru başlığı veya içerik ara..." value="@ViewBag.Search">
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <select name="sortOrder" class="form-select" onchange="this.form.submit()">
+                    <option value="">Sıralama Seçiniz...</option>
+                    <option value="date_desc" selected="@(ViewBag.SortOrder == "date_desc")">📅 En Yeni</option>
+                    <option value="date_asc" selected="@(ViewBag.SortOrder == "date_asc")">📅 En Eski</option>
+                    <option value="view_desc" selected="@(ViewBag.SortOrder == "view_desc")">👁 En Çok Görüntülenen</option>
+                    <option value="vote_desc" selected="@(ViewBag.SortOrder == "vote_desc")">⭐ En Çok Oylanan</option>
+                    <option value="title_asc" selected="@(ViewBag.SortOrder == "title_asc")">Abc.. (A-Z)</option>
+                    <option value="title_desc" selected="@(ViewBag.SortOrder == "title_desc")">Abc.. (Z-A)</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Filtrele</button>
+            </div>
+        </form>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-search"></i> Aradığınız kriterlere uygun soru bulunamadı.
+        </div>
+    }
+    else
+    {
+        @foreach (var question in Model)
+        {
+            <div class="card mb-3 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <a href="/Question/Details/@question.Id">@question.Title</a>
+                    </h5>
+                </div>
+            </div>
+        }
+    }
+</div>
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1><i class="fas fa-question-circle text-primary"></i> Tüm Sorular</h1>

@@ -104,6 +104,25 @@ namespace SoruCevapPortalı.Controllers
             return RedirectToAction(nameof(Questions));
         }
 
+        // -------------------- KULLANICI DETAY (EKSİK OLAN KISIM) --------------------
+        public async Task<IActionResult> UserDetail(string id)
+        {
+            // Kullanıcıyı bul
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            // İstatistikler için UnitOfWork kullanıyoruz
+            var userQuestions = await _unitOfWork.Questions.GetAllAsync(q => q.ApplicationUserId == id);
+            var userAnswers = await _unitOfWork.Answers.GetAllAsync(a => a.ApplicationUserId == id);
+
+            // ViewBag ile view tarafına veri taşıyoruz
+            ViewBag.TotalQuestions = userQuestions.Count();
+            ViewBag.TotalAnswers = userAnswers.Count();
+            ViewBag.MemberSince = user.RegistrationDate.Year; // Kayıt yılı
+
+            return View(user);
+        }
+
         // -------------------- KULLANICILAR (UserManager Kullanıyoruz) --------------------
         public IActionResult UserManagement()
         {
