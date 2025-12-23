@@ -21,32 +21,23 @@ namespace SoruCevapPortalı.Controllers
 
         public async Task<IActionResult> Index(string id)
         {
-            // Eğer id boşsa, giriş yapan kullanıcının kendi profilini getir
             var userId = string.IsNullOrEmpty(id) ? User.FindFirstValue(ClaimTypes.NameIdentifier) : id;
             var user = await _userManager.FindByIdAsync(userId);
 
             if (user == null) return NotFound("Kullanıcı bulunamadı.");
 
-            // Kullanıcının verilerini çekelim
             var questions = await _unitOfWork.Questions.GetAllAsync(q => q.ApplicationUserId == user.Id, "Category");
             var answers = await _unitOfWork.Answers.GetAllAsync(a => a.ApplicationUserId == user.Id, "Question");
 
-            // İstatistikler
             ViewBag.QuestionCount = questions.Count();
             ViewBag.AnswerCount = answers.Count();
-
-            // Toplam Görüntülenme (Sorularından)
             ViewBag.TotalViews = questions.Sum(q => q.ViewCount);
 
-            // Toplam Oy Puanı (Basit bir hesaplama: Soru Oyları + Cevap Oyları)
-            // Not: Gerçek bir Reputation sistemi için daha detaylı sorgu gerekir ama şimdilik bu yeterli.
-            ViewBag.Reputation = questions.Sum(q => q.VoteCount) + answers.Sum(a => a.VoteCount);
+            // 👇 DEĞİŞİKLİK BURADA: Artık hesaplama yapmıyoruz, kayıtlı puanı çekiyoruz.
+            ViewBag.Reputation = user.Reputation;
 
-            // Listeleri View'a gönder (En yeni en üstte)
             ViewBag.UserQuestions = questions.OrderByDescending(q => q.CreatedDate).ToList();
             ViewBag.UserAnswers = answers.OrderByDescending(a => a.CreatedDate).ToList();
-
-            // Kendi profili mi?
             ViewBag.IsMyProfile = (User.FindFirstValue(ClaimTypes.NameIdentifier) == user.Id);
 
             return View(user);

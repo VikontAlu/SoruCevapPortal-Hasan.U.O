@@ -19,6 +19,8 @@ namespace SoruCevapPortalı.Data
         public DbSet<QuestionVote> QuestionVotes { get; set; }
         public DbSet<AnswerVote> AnswerVotes { get; set; }
 
+        public DbSet<Report> Reports { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

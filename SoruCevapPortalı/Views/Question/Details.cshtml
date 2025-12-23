@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = Model.Title;
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
 
 <div class="container mt-4">
@@ -44,17 +45,25 @@
                         <p class="mb-0" style="white-space: pre-wrap; font-size: 1.05rem; line-height: 1.6;">@Model.Content</p>
                     </div>
 
-                    <div class="d-flex justify-content-end mt-3">
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            @if (User.Identity.IsAuthenticated && Model.ApplicationUserId != currentUserId)
+                            {
+                                <button class="btn btn-link text-muted p-0 text-decoration-none small" onclick="openReportModal('question', @Model.Id)">
+                                    <i class="fas fa-flag"></i> Bildir
+                                </button>
+                            }
+                        </div>
+
                         <div class="bg-primary bg-opacity-10 p-2 rounded border border-primary border-opacity-10 d-flex align-items-center" style="min-width: 200px;">
                             <div class="bg-primary text-white rounded me-2 d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
                                 @Model.ApplicationUser?.UserName?.Substring(0, 1).ToUpper()
                             </div>
                             <div class="small lh-1">
                                 <span class="d-block text-muted" style="font-size: 11px;">soran</span>
-
                                 <div class="d-flex align-items-center">
                                     <span class="fw-bold text-primary">@Model.ApplicationUser?.UserName</span>
-                                    <span class="badge bg-warning text-dark ms-2 border border-warning" title="Kullanıcı Puanı">
+                                    <span id="rep-question-author" class="badge bg-warning text-dark ms-2 border border-warning" title="Kullanıcı Puanı">
                                         <i class="fas fa-star fa-xs"></i> @(Model.ApplicationUser?.Reputation ?? 0)
                                     </span>
                                 </div>
@@ -89,7 +98,7 @@
                                     <i class="fas fa-check fa-2x"></i>
                                 </div>
                             }
-                            @if (User.Identity.IsAuthenticated && (Model.ApplicationUserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value || User.IsInRole("Admin")) && !answer.IsBestAnswer)
+                            @if (User.Identity.IsAuthenticated && (Model.ApplicationUserId == currentUserId || User.IsInRole("Admin")) && !answer.IsBestAnswer)
                             {
                                 <button onclick="acceptAnswer(@answer.Id)" class="btn btn-outline-success btn-sm border-0 mt-2" title="Bu cevabı kabul et">
                                     <i class="fas fa-check"></i>
@@ -103,12 +112,21 @@
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">Cevaplandı: @answer.CreatedDate.ToString("dd.MM.yyyy HH:mm")</small>
+                                <div class="d-flex gap-3 align-items-center">
+                                    <small class="text-muted">Cevaplandı: @answer.CreatedDate.ToString("dd.MM.yyyy HH:mm")</small>
+
+                                    @if (User.Identity.IsAuthenticated && answer.ApplicationUserId != currentUserId)
+                                    {
+                                        <button class="btn btn-link text-muted p-0 text-decoration-none small" onclick="openReportModal('answer', @answer.Id)">
+                                            <i class="fas fa-flag"></i> Bildir
+                                        </button>
+                                    }
+                                </div>
                                 <div class="d-flex align-items-center">
                                     <span class="text-muted small me-2">cevaplayan:</span>
-
                                     <span class="fw-bold text-dark">@answer.ApplicationUser?.UserName</span>
-                                    <span class="badge bg-light text-muted border ms-1" style="font-size: 0.75rem;" title="Kullanıcı Puanı">
+
+                                    <span id="rep-answer-author-@answer.Id" class="badge bg-light text-muted border ms-1" style="font-size: 0.75rem;" title="Kullanıcı Puanı">
                                         <i class="fas fa-star text-warning" style="font-size: 0.7rem;"></i> @(answer.ApplicationUser?.Reputation ?? 0)
                                     </span>
                                 </div>
@@ -172,11 +190,44 @@
     </div>
 </div>
 
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle text-warning me-2"></i>İçeriği Bildir</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <input type="hidden" id="reportType">
+                    <input type="hidden" id="reportTargetId">
+                    <div class="mb-3">
+                        <label class="form-label">Bu içeriği neden bildiriyorsunuz?</label>
+                        <select class="form-select mb-2" id="reportReasonSelect" onchange="checkCustomReason()">
+                            <option value="Spam veya reklam">Spam veya reklam</option>
+                            <option value="Hakaret veya uygunsuz dil">Hakaret veya uygunsuz dil</option>
+                            <option value="Yanlış bilgi">Yanlış bilgi</option>
+                            <option value="Konu dışı">Konu dışı</option>
+                            <option value="other">Diğer...</option>
+                        </select>
+                        <textarea class="form-control d-none" id="reportReasonCustom" rows="3" placeholder="Lütfen sebebi açıklayın..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-danger" onclick="submitReport()">Gönder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     @Html.AntiForgeryToken()
     <script>
         const getToken = () => document.querySelector('input[name="__RequestVerificationToken"]').value;
 
+        // Oylama İşlemleri (Puan Güncellemeli)
         function voteQuestion(questionId, isUpVote) {
             const formData = new URLSearchParams();
             formData.append('questionId', questionId);
@@ -189,6 +240,9 @@
             }).then(res => res.json()).then(data => {
                 if (data.success) {
                     document.getElementById('question-score').innerText = data.totalScore;
+                    // Yazarın puanını güncelle
+                    const repEl = document.getElementById('rep-question-author');
+                    if (repEl && data.authorRep !== undefined) repEl.innerHTML = '<i class="fas fa-star fa-xs"></i> ' + data.authorRep;
                 } else { alert(data.message); }
             });
         }
@@ -205,14 +259,15 @@
             }).then(res => res.json()).then(data => {
                 if (data.success) {
                     document.getElementById('answer-score-' + answerId).innerText = data.totalScore;
+                    // Yazarın puanını güncelle
+                    const repEl = document.getElementById('rep-answer-author-' + answerId);
+                    if (repEl && data.authorRep !== undefined) repEl.innerHTML = '<i class="fas fa-star text-warning" style="font-size: 0.7rem;"></i> ' + data.authorRep;
                 } else { alert(data.message); }
             });
         }
 
-        // CEVAP KABUL ETME FONKSİYONU
         function acceptAnswer(answerId) {
             if(!confirm("Bu cevabı 'En İyi Cevap' olarak işaretlemek istiyor musunuz?")) return;
-
             const formData = new URLSearchParams();
             formData.append('id', answerId);
 
@@ -221,9 +276,50 @@
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getToken() },
                 body: formData
             }).then(res => res.json()).then(data => {
-                if (data.success) {
-                    location.reload(); // Sayfayı yenile ki yeşil tik görünsün
-                } else { alert(data.message); }
+                if (data.success) { location.reload(); }
+                else { alert(data.message); }
+            });
+        }
+
+        // Raporlama İşlemleri
+        function openReportModal(type, id) {
+            document.getElementById('reportType').value = type;
+            document.getElementById('reportTargetId').value = id;
+            document.getElementById('reportReasonSelect').value = "Spam veya reklam";
+            checkCustomReason();
+            new bootstrap.Modal(document.getElementById('reportModal')).show();
+        }
+
+        function checkCustomReason() {
+            const select = document.getElementById('reportReasonSelect');
+            const customArea = document.getElementById('reportReasonCustom');
+            if(select.value === 'other') customArea.classList.remove('d-none');
+            else customArea.classList.add('d-none');
+        }
+
+        function submitReport() {
+            const type = document.getElementById('reportType').value;
+            const id = document.getElementById('reportTargetId').value;
+            const select = document.getElementById('reportReasonSelect');
+            let reason = select.value;
+            if(reason === 'other') reason = document.getElementById('reportReasonCustom').value;
+
+            if(!reason.trim()) { alert("Lütfen bir sebep belirtin."); return; }
+
+            const formData = new URLSearchParams();
+            if(type === 'question') formData.append('questionId', id);
+            if(type === 'answer') formData.append('answerId', id);
+            formData.append('reason', reason);
+
+            fetch('/Report/Create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': getToken() },
+                body: formData
+            }).then(res => res.json()).then(data => {
+                alert(data.message);
+                if(data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('reportModal')).hide();
+                }
             });
         }
     </script>

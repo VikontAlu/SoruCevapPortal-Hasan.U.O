@@ -22,16 +22,32 @@
                     <small class="text-muted">
                         <i class="fas fa-calendar-alt me-1"></i> Üyelik: @Model.RegistrationDate.ToString("dd MMMM yyyy")
                     </small>
+
+                    @if (!string.IsNullOrEmpty(Model.JobTitle))
+                    {
+                        <div class="text-primary small fw-bold mt-1">
+                            <i class="fas fa-briefcase me-1"></i> @Model.JobTitle
+                        </div>
+                    }
                 </div>
+
                 @if (ViewBag.IsMyProfile)
                 {
                     <div class="ms-auto mb-3">
-                        <a href="/Identity/Account/Manage" class="btn btn-outline-secondary btn-sm">
+                        <a href="/Profile/Settings" class="btn btn-outline-secondary btn-sm">
                             <i class="fas fa-cog"></i> Ayarlar
                         </a>
                     </div>
                 }
             </div>
+
+            @if (!string.IsNullOrEmpty(Model.AboutMe))
+            {
+                <div class="mt-4 p-3 bg-light rounded border-start border-4 border-primary">
+                    <h6 class="fw-bold text-muted small">Hakkında</h6>
+                    <p class="mb-0 text-dark">@Model.AboutMe</p>
+                </div>
+            }
         </div>
     </div>
 
@@ -40,10 +56,12 @@
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white fw-bold">İstatistikler</div>
                 <div class="list-group list-group-flush">
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
+
+                    <div class="list-group-item d-flex justify-content-between align-items-center bg-warning bg-opacity-10">
                         <span><i class="fas fa-star text-warning me-2"></i>Puan</span>
-                        <span class="fw-bold">@ViewBag.Reputation</span>
+                        <span class="fw-bold fs-5 text-dark">@ViewBag.Reputation</span>
                     </div>
+
                     <div class="list-group-item d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-question-circle text-primary me-2"></i>Soru</span>
                         <span class="badge bg-primary rounded-pill">@ViewBag.QuestionCount</span>
@@ -84,7 +102,7 @@
                             <div class="card border-0 shadow-sm mb-2 hover-bg">
                                 <div class="card-body py-2">
                                     <div class="d-flex align-items-center">
-                                        <div class="me-3 text-center" style="min-width: 40px;">
+                                        <div class="me-3 text-center" style="min-width: 60px;">
                                             <span class="badge @(q.IsSolved ? "bg-success" : "bg-light text-dark border") d-block">
                                                 @q.VoteCount oy
                                             </span>
@@ -94,11 +112,12 @@
                                                 <a href="/Question/Details/@q.Id" class="text-decoration-none text-dark fw-bold">@q.Title</a>
                                             </h6>
                                             <small class="text-muted">
-                                                @q.CreatedDate.ToString("dd MMM yyyy") • @q.Category?.Name
+                                                @q.CreatedDate.ToString("dd MMM yyyy") •
+                                                <span class="badge bg-secondary bg-opacity-10 text-dark">@q.Category?.Name</span>
                                             </small>
                                         </div>
-                                        <div class="ms-2">
-                                            <span class="badge bg-light text-dark">@q.ViewCount göz</span>
+                                        <div class="ms-2 text-muted small">
+                                            <i class="fas fa-eye"></i> @q.ViewCount
                                         </div>
                                     </div>
                                 </div>
@@ -128,8 +147,14 @@
                                         <p class="mb-1 text-dark text-truncate">@a.Content</p>
                                         <div class="d-flex align-items-center small">
                                             <span class="text-muted me-3">@a.CreatedDate.ToString("dd MMM yyyy")</span>
-                                            <span class="badge @(a.IsBestAnswer ? "bg-success" : "bg-secondary")">
-                                                @(a.IsBestAnswer ? "Kabul Edildi" : $"{a.VoteCount} Oy")
+
+                                            @if (a.IsBestAnswer)
+                                            {
+                                                <span class="badge bg-success me-2"><i class="fas fa-check"></i> Kabul Edildi</span>
+                                            }
+
+                                            <span class="badge bg-light text-dark border">
+                                                @a.VoteCount Oy
                                             </span>
                                         </div>
                                     </div>
@@ -149,20 +174,8 @@
 </div>
 
 <style>
-    .hover-bg {
-        transition: background-color 0.2s;
-    }
-
-        .hover-bg:hover {
-            background-color: #f8f9fa;
-        }
-
-    .nav-pills .nav-link {
-        color: #495057;
-    }
-
-        .nav-pills .nav-link.active {
-            background-color: #0d6efd;
-            color: white;
-        }
+    .hover-bg { transition: background-color 0.2s; }
+    .hover-bg:hover { background-color: #f8f9fa; }
+    .nav-pills .nav-link { color: #495057; }
+    .nav-pills .nav-link.active { background-color: #0d6efd; color: white; }
 </style>
